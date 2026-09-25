@@ -29,6 +29,8 @@ export class HUD {
   private toastTimer = 0;
   private promptText = '';
   onMute: (() => boolean) | null = null;
+  /** Mode tactile : pas de touche E à afficher, c'est le bouton d'action. */
+  touch = false;
   onPause: (() => void) | null = null;
 
   constructor(parent: HTMLElement) {
@@ -87,7 +89,7 @@ export class HUD {
         (id) =>
           `<li data-id="${id}"><span class="pi">${ICONS[id]}</span><span><b>${ITEM_LABELS[id]}</b><small>${HINTS[id]}</small></span><em></em></li>`,
       )
-      .join('')}</ul><p class="panel-foot">Tab pour fermer</p>`;
+      .join('')}</ul><p class="panel-foot">${this.touch ? 'Touche « Sac » pour fermer' : 'Tab pour fermer'}</p>`;
     this.toast.classList.remove('visible');
     this.setPrompt('');
     this.showPanel(false);
@@ -116,7 +118,7 @@ export class HUD {
   setPrompt(text: string): void {
     if (text === this.promptText) return;
     this.promptText = text;
-    this.prompt.innerHTML = text ? text.replace(/^E /, '<kbd>E</kbd> ') : '';
+    this.prompt.innerHTML = text ? text.replace(/^E /, this.touch ? '' : '<kbd>E</kbd> ') : '';
     this.prompt.classList.toggle('visible', text.length > 0);
   }
 

@@ -13,6 +13,7 @@ import { Inventory } from '../items/Inventory';
 import { HUD } from '../ui/HUD';
 import { Minimap, type MapMarker } from '../ui/Minimap';
 import { AudioManager } from '../audio/AudioManager';
+import { TouchControls, isTouchDevice } from '../ui/TouchControls';
 import { DrunkBlur } from '../fx/DrunkBlur';
 import type { Vehicle } from '../vehicles/Vehicle';
 import { Car } from '../vehicles/Car';
@@ -43,6 +44,7 @@ export class Game {
   blur: DrunkBlur | null = null;
   readonly hud: HUD;
   readonly audio = new AudioManager();
+  readonly touch: TouchControls | null = null;
   items: Item[] = [];
   inventory = new Inventory();
   elapsed = 0;
@@ -73,7 +75,9 @@ export class Game {
 
   constructor(readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const touch = isTouchDevice();
+    // Sur mobile, on limite la résolution pour garder un framerate correct
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, touch ? 1.5 : 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -81,8 +85,14 @@ export class Game {
     this.renderer.toneMappingExposure = 1.05;
     this.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 1200);
     this.input = new Input(canvas);
+    this.resize();
     this.hud = new HUD(document.getElementById('ui')!);
     this.input.onKey = (code, e) => this.onKey(code, e);
+    if (touch) {
+      document.body.classList.add('is-touch');
+      this.hud.touch = true;
+      this.touch = new TouchControls(document.getElementById('ui')!, this.input);
+    }
     this.hud.setMuted(this.audio.muted);
     this.hud.onMute = () => this.audio.toggleMute();
     this.onToggleMute = () => this.hud.setMuted(this.audio.toggleMute());
@@ -99,6 +109,8 @@ export class Game {
 
   private resize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
+    // En portrait, champ plus large pour voir autour du personnage
+    this.camera.fov = this.camera.aspect < 1 ? 78 : 62;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
   }
@@ -581,6 +593,10 @@ export class Game {
     }
     for (const it of this.items) it.update(dt, this.camera, this.player.position);
     this.hud.setPrompt(this.state === 'playing' ? this.currentPrompt : '');
+    if (this.touch) {
+      this.touch.show(this.state === 'playing');
+      this.touch.setActionHint(this.state === 'playing' ? this.currentPrompt : '');
+    }
     const drv = this.driving;
     this.audio.update(dt, {
       engine: drv && drv === this.car && this.state === 'playing' ? drv.speed : null,

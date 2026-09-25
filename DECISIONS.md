@@ -44,3 +44,4 @@
 - Écran d'erreur : si ni `navigator.gpu` ni WebGL2 → message « Ton navigateur a encore plus mal au crâne que toi » ; si l'initialisation du renderer échoue → second message explicite.
 - Image de partage générée par capture Playwright (`npm run capture`) : `public/og-image.png` (1200×630, menu sur la ville floutée) ; captures du README dans `docs/`.
 - Déploiement : workflow GitHub Pages (`actions/upload-pages-artifact` + `actions/deploy-pages`) ; l'activation de Pages (Source : GitHub Actions) doit être faite une fois dans les réglages du dépôt (pas de `gh` ici).
+- Mobile : détection par `ontouchstart` / `maxTouchPoints` / `pointer: coarse`. Joystick flottant (apparaît sous le doigt) sur les 45 % gauche, glisser pour la caméra sur les 55 % droits, boutons Sac / Courir (bascule) / Saut / Action (E, pulse quand une interaction est possible). Résolution limitée à 1,5× et FOV 78° en portrait.

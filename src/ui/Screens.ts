@@ -52,6 +52,7 @@ export class Menu {
           <p class="tagline">Tu te réveilles sur un banc. Tes lunettes, tes clés, ta voiture : tout a disparu. Rentre chez toi.</p>
           <div class="modes" role="radiogroup" aria-label="Difficulté"></div>
           <button class="btn primary play" data-testid="play">Jouer</button>
+          <p class="touch-hint">Joystick à gauche pour marcher, glisse à droite pour tourner la caméra, gros bouton pour agir.</p>
           <details class="controls">
             <summary>Contrôles</summary>
             <ul>

@@ -545,3 +545,147 @@ kbd {
 @keyframes pulse {
   50% { color: var(--accent); }
 }
+
+/* ---------- Contrôles tactiles ---------- */
+.touch {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  touch-action: none;
+}
+
+.touch[hidden] {
+  display: none;
+}
+
+.touch-zone {
+  position: absolute;
+  top: 70px;
+  bottom: 0;
+  touch-action: none;
+}
+
+.touch-zone.left {
+  left: 0;
+  width: 45%;
+}
+
+.touch-zone.right {
+  right: 0;
+  width: 55%;
+}
+
+.stick {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  background: rgba(255, 247, 238, 0.25);
+  border: 3px solid rgba(255, 247, 238, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.stick.active {
+  opacity: 1;
+}
+
+.knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: rgba(255, 247, 238, 0.9);
+  box-shadow: 0 2px 8px rgba(45, 38, 64, 0.3);
+}
+
+.touch-buttons {
+  position: absolute;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 10px;
+  align-items: end;
+  justify-items: center;
+}
+
+.tbtn {
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 247, 238, 0.85);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 3px 10px rgba(45, 38, 64, 0.3);
+  touch-action: none;
+  user-select: none;
+}
+
+.tbtn.small {
+  width: 52px;
+  height: 52px;
+  font-size: 12px;
+}
+
+.tbtn.action {
+  width: 84px;
+  height: 84px;
+  font-size: 26px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.tbtn.action.ready {
+  animation: ready 0.9s ease-in-out infinite;
+}
+
+.tbtn.run.on {
+  background: var(--accent-2);
+}
+
+@keyframes ready {
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 8px rgba(255, 111, 89, 0.35);
+  }
+}
+
+.is-touch .hud-minimap {
+  right: auto;
+  left: 16px;
+  bottom: 16px;
+  width: 130px;
+  height: 130px;
+}
+
+.is-touch .hud-prompt {
+  bottom: 190px;
+}
+
+.is-touch .hud-toast {
+  bottom: 240px;
+}
+
+.is-touch .controls {
+  display: none;
+}
+
+.touch-hint {
+  display: none;
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: #5a5270;
+}
+
+.is-touch .touch-hint {
+  display: block;
+}

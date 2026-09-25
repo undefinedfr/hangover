@@ -45,3 +45,19 @@ Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de de
 - Écran navigateur non supporté, écran de chargement, favicon SVG, titre, meta description / Open Graph / Twitter, image de partage générée par capture.
 - README avec captures.
 - 19 tests verts, aucune erreur console.
+
+## M8 (bonus) — Mobile ✅
+- Joystick virtuel, zone caméra, boutons d'action ; HUD adapté (mini-carte à gauche, invites sans touche E, aide tactile dans le menu).
+- Test Playwright en émulation Pixel 7.
+
+## Déploiement
+- Workflow `.github/workflows/deploy.yml` poussé. Le build passe sur GitHub Actions, mais le premier run a échoué à l'étape `configure-pages` : **GitHub Pages n'est pas encore activé sur le dépôt**.
+- Pour publier : dépôt `undefinedfr/hangover` → Settings → Pages → Source : **GitHub Actions**, puis Actions → « Déploiement GitHub Pages » → Run workflow. URL attendue : https://undefinedfr.github.io/hangover/
+- `gh` n'est pas disponible dans l'environnement de dev ; avec `gh auth login`, l'équivalent est : `gh api -X POST repos/undefinedfr/hangover/pages -f build_type=workflow` puis `gh workflow run deploy.yml`.
+- En local : `npm run build && npx vite preview --host --port 4173`.
+
+## Limites connues
+- 60 fps non mesurable ici (pas de GPU, rendu logiciel ~10 fps) : la conception vise un laptop récent (instancing, ombres locales, flou désactivé une fois les lunettes trouvées).
+- Pas de circulation ni de piétons ; les houppiers des arbres n'ont pas de collision (la caméra peut les traverser).
+- Durée « ~5 min » du mode facile estimée à partir des distances (≈ 400 m à pied + 150 m en voiture sur 5 seeds), pas chronométrée en jeu réel.
+- La mini-carte est orientée nord (elle ne tourne pas avec la caméra).
