@@ -22,3 +22,8 @@ Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de de
 - Placement seedé selon le mode (évidence / derrière des props / recoins).
 - Ramassage avec E (invite « E Ramasser : … »), message d'humour par objet, icônes grisées puis colorées, panneau d'inventaire (Tab), chrono.
 - Test 4 vert (facile et normal).
+
+## M4 — Flou et titubement ✅
+- Post-process TSL : net dans un rayon autour du joueur (4 m / 3 m / 1,5 m selon le mode), flou au-delà ; transition d'environ 1 s quand on ramasse les lunettes.
+- Titubement (dérive latérale + roulis), qui diminue quand on reprend ses esprits.
+- Test : captures avant/après lunettes (`tests/screenshots/blur-*.png`) avec mesure de netteté (≈ ×2,5).

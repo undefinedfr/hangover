@@ -1,4 +1,6 @@
 import * as THREE from 'three/webgpu';
+import { itemGeometry } from '../items/models';
+import { vertexColorMaterial } from '../world/materials';
 import { Physics, RAPIER, GROUP_PLAYER, GROUP_WORLD, GROUP_VEHICLE, groups } from '../core/Physics';
 
 export const WALK_SPEED = 4;
@@ -25,6 +27,7 @@ export class Player {
   private readonly armR: THREE.Group;
   private readonly legL: THREE.Group;
   private readonly legR: THREE.Group;
+  private readonly glasses: THREE.Mesh;
 
   readonly position = new THREE.Vector3();
   facing = 0;
@@ -80,6 +83,12 @@ export class Player {
       this.head.add(eye);
     }
 
+    this.glasses = new THREE.Mesh(itemGeometry('lunettes'), vertexColorMaterial({ flat: false }));
+    this.glasses.scale.setScalar(0.85);
+    this.glasses.position.set(0, 0.03, 0.2);
+    this.glasses.visible = false;
+    this.head.add(this.glasses);
+
     const limb = (len: number, r: number, mat: THREE.Material) => {
       const g = new THREE.Group();
       const m = cast(new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 3, 6), mat));
@@ -111,6 +120,10 @@ export class Player {
     this.controller.enableSnapToGround(0.3);
     this.controller.setMaxSlopeClimbAngle((50 * Math.PI) / 180);
     this.controller.setSlideEnabled(true);
+  }
+
+  wearGlasses(): void {
+    this.glasses.visible = true;
   }
 
   /** Téléporte les pieds du joueur en (x, y, z). */

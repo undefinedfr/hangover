@@ -12,6 +12,8 @@ export class ThirdPersonCamera {
   private readonly smoothedTarget = new THREE.Vector3();
   private initialized = false;
   sensitivity = 0.0025;
+  /** Tangage « lendemain de fête » (0 = aucun). */
+  sway = 0;
 
   constructor(readonly camera: THREE.PerspectiveCamera, private readonly physics: Physics) {}
 
@@ -50,5 +52,9 @@ export class ThirdPersonCamera {
     this.camera.position.copy(this.smoothedTarget).addScaledVector(dir, this.current);
     if (this.camera.position.y < 0.3) this.camera.position.y = 0.3;
     this.camera.lookAt(this.smoothedTarget);
+    if (this.sway > 0) {
+      const t = performance.now() / 1000;
+      this.camera.rotateZ((Math.sin(t * 0.8) * 0.6 + Math.sin(t * 1.9 + 2) * 0.4) * 0.025 * this.sway);
+    }
   }
 }

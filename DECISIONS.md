@@ -23,3 +23,6 @@
 - Ombres : bias -0,001 / normalBias 0,08 pour supprimer l'acné d'ombre sur les façades rasantes.
 - Hash des fenêtres sans la coordonnée de profondeur de la façade (instable quand elle tombe sur un entier).
 - `teleportTo(objet)` place le joueur sur une position libre à ~1 m de l'objet (test de chevauchement de capsule).
+- Flou : `pass()` → `gaussianBlur` (demi-résolution, rayon selon le mode) ; distance au joueur reconstruite par `getViewPosition` depuis la profondeur de la passe, mélange par `smoothstep(rayonNet, rayonNet + fondu)`. Ajout d'un léger dédoublement ondulant et d'une vignette, proportionnels au flou. Une fois net, la sortie du pipeline redevient la passe de scène seule (coût nul).
+- Titubement : dérive latérale (somme de sinus déphasés par la seed) proportionnelle à la vitesse + roulis du buste + léger roulis caméra. Réduit à 30 % quand téléphone + portefeuille sont trouvés (en facile, où ils n'existent pas : avec les lunettes).
+- Les lunettes apparaissent sur le visage du personnage une fois ramassées.

@@ -1,5 +1,4 @@
 import * as THREE from 'three/webgpu';
-import { pass } from 'three/tsl';
 import { Input } from './Input';
 import { Physics, initPhysics } from './Physics';
 import { RNG } from './rng';
@@ -12,6 +11,7 @@ import { Item } from '../items/Item';
 import { spawnItems, pickupMessage } from '../items/ItemSpawner';
 import { Inventory } from '../items/Inventory';
 import { HUD } from '../ui/HUD';
+import { DrunkBlur } from '../fx/DrunkBlur';
 import { ITEM_LABELS, type InventoryId, type ItemId } from './GameState';
 
 const INTERACT_RADIUS = 1.9;
@@ -34,7 +34,7 @@ export class Game {
   cam: ThirdPersonCamera | null = null;
   env: Environment | null = null;
   city: City | null = null;
-  private pipeline: THREE.RenderPipeline | null = null;
+  blur: DrunkBlur | null = null;
   readonly hud: HUD;
   items: Item[] = [];
   inventory = new Inventory();
@@ -104,6 +104,7 @@ export class Game {
     this.player.facing = st.rotY;
     this.cam = new ThirdPersonCamera(this.camera, this.physics);
     this.cam.yaw = st.rotY;
+    this.cam.sway = cfg.sway;
     this.physics.step();
 
     this.inventory = new Inventory();
@@ -118,8 +119,10 @@ export class Game {
     this.lastMessage = '';
     this.message('Tu te réveilles sur un banc. Aïe. Où sont passées tes affaires ?', 6);
 
-    const scenePass = pass(this.scene, this.camera);
-    this.pipeline = new THREE.RenderPipeline(this.renderer, scenePass);
+    this.blur = new DrunkBlur(this.renderer, this.scene, this.camera, {
+      strength: cfg.blurStrength,
+      sharpRadius: cfg.sharpRadius,
+    });
 
     this.accumulator = 0;
     this.state = 'playing';
@@ -132,8 +135,8 @@ export class Game {
     this.player = null;
     this.physics?.dispose();
     this.physics = null;
-    this.pipeline?.dispose();
-    this.pipeline = null;
+    this.blur?.dispose();
+    this.blur = null;
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) m.geometry.dispose();
@@ -178,7 +181,24 @@ export class Game {
   }
 
   /** Effets de gameplay d'un ramassage. */
-  private onCollected(_id: ItemId): void {}
+  private onCollected(id: ItemId): void {
+    const cfg = MODES[this.mode];
+    if (id === 'lunettes') {
+      this.blur?.clear();
+      this.player?.wearGlasses();
+    }
+    // « Tu reprends tes esprits » : le titubement diminue
+    const recovered = cfg.walletRequired
+      ? this.inventory.has('telephone') && this.inventory.has('portefeuille')
+      : this.inventory.has('lunettes');
+    if (recovered && this.player) {
+      this.player.swayIntensity = cfg.sway * 0.3;
+      if (this.cam) this.cam.sway = cfg.sway * 0.3;
+      if (id !== 'lunettes' || !cfg.walletRequired) {
+        setTimeout(() => this.state === 'playing' && this.message('Tu reprends tes esprits. Tu marches presque droit.', 3.5), 4600);
+      }
+    }
+  }
 
   // --- Lecture pour le hook de test ---
   lastMessage = '';
@@ -196,7 +216,7 @@ export class Game {
   }
 
   blurAmount(): number {
-    return 0;
+    return this.blur ? this.blur.value : 0;
   }
 
   debugTeleport(name: string): boolean {
@@ -262,7 +282,7 @@ export class Game {
     }
     this.frameUpdate(dt);
 
-    if (this.pipeline) this.pipeline.render();
+    if (this.blur) this.blur.render();
     else this.renderer.render(this.scene, this.camera);
   }
 
@@ -301,5 +321,7 @@ export class Game {
     this.hud.update(dt);
     this.cam.update(dt, this.player.position);
     this.env?.follow(this.player.position, this.camera);
+    this.camera.updateMatrixWorld();
+    this.blur?.update(dt, this.player.position);
   }
 }
