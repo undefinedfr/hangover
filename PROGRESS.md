@@ -7,4 +7,12 @@
 - Hook `window.__game` (state, mode, seed, inventory, player.position, inVehicle, fps, debug.startGame / teleportTo).
 - Tests Playwright : chargement sans erreur, rendu non vide, déplacement, saut.
 
-Limites connues : arène provisoire (remplacée par la ville en M2).
+
+
+## M2 — Ville ✅
+- Générateur seedé (`?seed=`) : rues avec marquages et passages piétons, trottoirs, immeubles colorés à fenêtres procédurales, parcs, parkings, pavillons, cinéma, maison d'arrivée, voitures garées, lampadaires, bancs, poubelles, arbres, bouches d'incendie.
+- Colliders Rapier pour tous les bâtiments et le mobilier ; murs invisibles en bordure.
+- Instancing systématique ; ombres limitées à 90 m autour du joueur.
+- Tests : pas de traversée des façades, génération normale (7×7) et hardcore (11×11).
+
+Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de dev (pas de GPU, rendu logiciel ~10 fps) ; la conception (instancing, ombres locales) vise un laptop récent.

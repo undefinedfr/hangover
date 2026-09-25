@@ -16,6 +16,9 @@ export interface GameHook {
     startGame(mode: Mode, seed: number): void;
     teleportTo(name: string): boolean;
     interact(): void;
+    camera(distance: number, pitch: number, yaw?: number): void;
+    teleportXYZ(x: number, y: number, z: number): void;
+    footprints(): Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
   };
 }
 
@@ -63,6 +66,18 @@ export function installHook(game: Game, start: (mode: Mode, seed: number) => voi
       startGame: (mode, seed) => start(mode, seed),
       teleportTo: (name) => game.debugTeleport(name),
       interact: () => game.input.press('KeyE'),
+      teleportXYZ: (x, y, z) => {
+        game.player?.teleport(x, y, z);
+        game.cam?.snap();
+      },
+      footprints: () => game.city?.footprints.map((f) => ({ ...f })) ?? [],
+      camera: (distance, pitch, yaw) => {
+        if (!game.cam) return;
+        game.cam.distance = distance;
+        game.cam.pitch = pitch;
+        if (yaw !== undefined) game.cam.yaw = yaw;
+        game.cam.snap();
+      },
     },
   };
   Object.defineProperty(window, '__game', { value: hook, configurable: true });

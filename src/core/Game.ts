@@ -7,6 +7,7 @@ import { MODES, type Mode, type State } from './GameState';
 import { Environment } from '../world/Environment';
 import { Player } from '../player/Player';
 import { ThirdPersonCamera } from '../player/ThirdPersonCamera';
+import { generateCity, type City } from '../world/CityGenerator';
 
 const FIXED_DT = 1 / 60;
 const MAX_STEPS = 5;
@@ -20,6 +21,7 @@ export class Game {
   player: Player | null = null;
   cam: ThirdPersonCamera | null = null;
   env: Environment | null = null;
+  city: City | null = null;
   private pipeline: THREE.RenderPipeline | null = null;
 
   state: State = 'menu';
@@ -40,7 +42,7 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 1200);
@@ -72,13 +74,17 @@ export class Game {
     this.scene = new THREE.Scene();
     this.physics = new Physics();
     this.env = new Environment(this.scene);
-    this.buildArena(rng);
+    this.city = generateCity(seed, cfg.blocks, this.physics);
+    this.scene.add(this.city.root);
 
     this.player = new Player(this.physics, rng.range(0, 100));
     this.player.swayIntensity = cfg.sway;
     this.scene.add(this.player.object);
-    this.player.teleport(0, 0.1, 0);
+    const st = this.city.start;
+    this.player.teleport(st.x, st.y + 0.05, st.z);
+    this.player.facing = st.rotY;
     this.cam = new ThirdPersonCamera(this.camera, this.physics);
+    this.cam.yaw = st.rotY;
     this.physics.step();
 
     const scenePass = pass(this.scene, this.camera);
@@ -87,32 +93,6 @@ export class Game {
     this.accumulator = 0;
     this.state = 'playing';
     this.input.clearPressed();
-  }
-
-  /** Arène provisoire (M1) : sol + obstacles. */
-  private buildArena(rng: RNG): void {
-    const physics = this.physics!;
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 200),
-      new THREE.MeshStandardNodeMaterial({ color: 0x9fb07a, roughness: 1 }),
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    this.scene.add(ground);
-    physics.addBox(0, -0.5, 0, 100, 0.5, 100);
-    const mat = new THREE.MeshStandardNodeMaterial({ color: 0xe8a0bf, roughness: 0.8 });
-    for (let i = 0; i < 12; i++) {
-      const w = rng.range(2, 6);
-      const h = rng.range(1, 8);
-      const d = rng.range(2, 6);
-      const x = rng.range(-40, 40);
-      const z = rng.range(8, 40) * (rng.chance(0.5) ? 1 : -1);
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      m.position.set(x, h / 2, z);
-      m.castShadow = m.receiveShadow = true;
-      this.scene.add(m);
-      physics.addBox(x, h / 2, z, w / 2, h / 2, d / 2);
-    }
   }
 
   private teardown(): void {
@@ -149,11 +129,20 @@ export class Game {
 
   debugTeleport(name: string): boolean {
     if (!this.player) return false;
-    if (name === 'origine') {
-      this.player.teleport(0, 0.1, 0);
-      return true;
-    }
-    return false;
+    const c = this.city;
+    if (!c) return false;
+    const places: Record<string, { x: number; y: number; z: number }> = {
+      depart: c.start,
+      porte: c.house.door,
+      maisonRue: { x: c.house.front.x, y: 0, z: c.house.front.z },
+      voitureSpawn: c.carSpawn,
+      cinema: c.tricycleSpawn,
+    };
+    const p = places[name];
+    if (!p) return false;
+    this.player.teleport(p.x, p.y + 0.05, p.z);
+    this.cam?.snap();
+    return true;
   }
 
   private frame(now: number): void {

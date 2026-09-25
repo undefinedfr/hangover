@@ -29,11 +29,13 @@ test('3. appui prolongé sur avancer : le joueur se déplace', async ({ page }) 
   await waitFrames(page, 10);
   const before = await page.evaluate(() => window.__game.player.position);
   await page.keyboard.down('KeyW');
-  await page.waitForTimeout(1500);
+  await expect
+    .poll(async () => {
+      const p = await page.evaluate(() => window.__game.player.position);
+      return Math.hypot(p.x - before.x, p.z - before.z);
+    })
+    .toBeGreaterThan(1);
   await page.keyboard.up('KeyW');
-  const after = await page.evaluate(() => window.__game.player.position);
-  const moved = Math.hypot(after.x - before.x, after.z - before.z);
-  expect(moved).toBeGreaterThan(0.5);
 });
 
 test('M1. saut : le joueur décolle puis retombe', async ({ page }) => {
@@ -42,13 +44,6 @@ test('M1. saut : le joueur décolle puis retombe', async ({ page }) => {
   await waitFrames(page, 20);
   const y0 = await page.evaluate(() => window.__game.player.position.y);
   await page.keyboard.press('Space');
-  let peak = y0;
-  for (let i = 0; i < 20; i++) {
-    await page.waitForTimeout(30);
-    peak = Math.max(peak, await page.evaluate(() => window.__game.player.position.y));
-  }
-  expect(peak - y0).toBeGreaterThan(0.3);
-  await page.waitForTimeout(1500);
-  const y1 = await page.evaluate(() => window.__game.player.position.y);
-  expect(Math.abs(y1 - y0)).toBeLessThan(0.2);
+  await expect.poll(() => page.evaluate(() => window.__game.player.position.y), { intervals: [20] }).toBeGreaterThan(y0 + 0.3);
+  await expect.poll(() => page.evaluate(() => window.__game.player.position.y)).toBeLessThan(y0 + 0.05);
 });
