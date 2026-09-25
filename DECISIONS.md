@@ -40,3 +40,7 @@
 - Pause : Échap (ou perte du pointer lock, ou bouton ❚❚). Le chrono compte le temps de jeu (pas fixe), donc il s'arrête en pause.
 - Meilleurs temps par mode dans `localStorage` (clé `gueule-de-bois.best.v1`), lecture et écriture protégées par try/catch.
 - Durées estimées (chemin optimal connu, 5 seeds) : facile ≈ 400 m à pied + 150 m en voiture ; normal ≈ 1 km + 400 m ; hardcore ≈ 1,6 km + 500 m, à multiplier par la recherche.
+- Audio 100 % WebAudio : pas (bruit filtré, étouffé sur moquette), jingle d'arpège au ramassage, moteur (dents de scie désaccordées, régime selon la vitesse), roulement du tricycle/trottinette (bruit en bande, coupé sur la moquette) avec grincement de pédalier, rumeur de ville + oiseaux du matin + klaxon lointain. Contexte créé à la première interaction ; état « muet » mémorisé.
+- Écran d'erreur : si ni `navigator.gpu` ni WebGL2 → message « Ton navigateur a encore plus mal au crâne que toi » ; si l'initialisation du renderer échoue → second message explicite.
+- Image de partage générée par capture Playwright (`npm run capture`) : `public/og-image.png` (1200×630, menu sur la ville floutée) ; captures du README dans `docs/`.
+- Déploiement : workflow GitHub Pages (`actions/upload-pages-artifact` + `actions/deploy-pages`) ; l'activation de Pages (Source : GitHub Actions) doit être faite une fois dans les réglages du dépôt (pas de `gh` ici).

@@ -2,18 +2,35 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Gueule de bois</title>
+    <meta name="description" content="Jeu 3D dans le navigateur : tu te réveilles sur un banc après une soirée trop arrosée. Retrouve tes lunettes, tes clés et ta voiture, puis rentre chez toi." />
+    <meta name="theme-color" content="#ff6f59" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Gueule de bois" />
+    <meta property="og:description" content="Réveil difficile sur un banc public. Retrouve tes affaires éparpillées en ville, récupère ta voiture et rentre chez toi. Jeu 3D low poly, dans le navigateur." />
+    <meta property="og:image" content="./og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Gueule de bois" />
+    <meta name="twitter:description" content="Retrouve tes lunettes, tes clés et ta voiture, puis rentre chez toi. Jeu 3D low poly dans le navigateur." />
+    <meta name="twitter:image" content="./og-image.png" />
   </head>
   <body>
-    <canvas id="game"></canvas>
+    <canvas id="game" tabindex="0" aria-label="Jeu Gueule de bois"></canvas>
     <div id="ui"></div>
+    <div id="loading" class="loading">Réveil en cours…</div>
     <div id="fatal" class="fatal" hidden>
       <div class="card">
         <h2></h2>
         <p></p>
       </div>
     </div>
+    <noscript>
+      <div class="fatal"><div class="card"><h2>JavaScript est désactivé</h2><p>Ce jeu a besoin de JavaScript pour fonctionner.</p></div></div>
+    </noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

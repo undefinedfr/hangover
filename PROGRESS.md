@@ -38,3 +38,10 @@ Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de de
 - Chrono, pause (Échap / bouton), condition de victoire (objets + arrivée en voiture + porte), écran de fin (temps, mode, seed, record, Rejouer / Même ville / Menu), meilleurs temps en localStorage.
 - Mini-carte du téléphone selon le mode.
 - Test 5 vert (scénario complet facile), tests pause et mini-carte.
+
+## M7 — Polish ✅
+- Audio synthétisé (pas, ramassage, moteur, roulement du tricycle, ambiance), bouton muet + touche M.
+- Animations : « pop » au ramassage, respiration au repos, tête qui dodeline, lunettes sur le nez.
+- Écran navigateur non supporté, écran de chargement, favicon SVG, titre, meta description / Open Graph / Twitter, image de partage générée par capture.
+- README avec captures.
+- 19 tests verts, aucune erreur console.

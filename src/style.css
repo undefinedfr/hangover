@@ -524,3 +524,24 @@ kbd {
     font-size: 20px;
   }
 }
+
+.loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 5;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  background: linear-gradient(#7fb2e6, #ffc49a);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.loading[hidden] {
+  display: none;
+}
+
+@keyframes pulse {
+  50% { color: var(--accent); }
+}

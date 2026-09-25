@@ -14,6 +14,7 @@ export class Item {
   private readonly beam: THREE.Mesh;
   private readonly haloOpacity = uniform(1);
   collected = false;
+  private vanish = 0;
   private readonly phase: number;
 
   constructor(
@@ -62,7 +63,18 @@ export class Item {
   }
 
   update(dt: number, camera: THREE.Camera, playerPos: THREE.Vector3): void {
-    if (this.collected) return;
+    if (this.collected) {
+      // Petit « pop » : l'objet grossit, monte et disparaît
+      if (this.vanish > 0) {
+        this.vanish = Math.max(0, this.vanish - dt);
+        const k = 1 - this.vanish / 0.35;
+        this.model.scale.setScalar(1.8 * (1 + k * 0.8) * (1 - k * k));
+        this.model.position.y += dt * 3;
+        this.model.rotation.y += dt * 12;
+        if (this.vanish === 0) this.object.visible = false;
+      }
+      return;
+    }
     const t = performance.now() / 1000 + this.phase;
     this.model.position.y = 0.45 + Math.sin(t * 2) * 0.08;
     this.model.rotation.y += dt * 1.5;
@@ -81,6 +93,7 @@ export class Item {
 
   collect(): void {
     this.collected = true;
-    this.object.visible = false;
+    this.vanish = 0.35;
+    this.halo.visible = this.beam.visible = false;
   }
 }

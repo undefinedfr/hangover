@@ -14,7 +14,12 @@ function hasWebGL2(): boolean {
   }
 }
 
+function hideLoading(): void {
+  document.getElementById('loading')?.setAttribute('hidden', '');
+}
+
 function showFatal(title: string, detail: string): void {
+  hideLoading();
   const el = document.getElementById('fatal')!;
   el.querySelector('h2')!.textContent = title;
   el.querySelector('p')!.textContent = detail;
@@ -116,6 +121,7 @@ async function boot(): Promise<void> {
 
   installHook(game, start);
   showMenu();
+  hideLoading();
   if (isMode(urlMode)) menu.select(urlMode);
 }
 

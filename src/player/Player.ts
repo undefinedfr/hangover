@@ -213,7 +213,10 @@ export class Player {
       this.legR.rotation.x = -s * amp;
       this.armL.rotation.set(-s * amp * 0.8, 0, -0.08);
       this.armR.rotation.set(s * amp * 0.8, 0, 0.08);
-      this.torso.position.y = 0.95 + Math.abs(Math.cos(this.phase)) * 0.06 * moving;
+      // Respiration au repos, rebond en marchant
+      const breath = (1 - moving) * Math.sin(t * 2.2) * 0.012;
+      this.torso.position.y = 0.95 + Math.abs(Math.cos(this.phase)) * 0.06 * moving + breath;
+      this.head.rotation.x = (1 - moving) * (0.08 + Math.sin(t * 0.6) * 0.06);
       // Léger roulis de gueule de bois
       const wobble = Math.sin(t * 1.7) * 0.05 + Math.sin(t * 0.9 + 1) * 0.04;
       this.torso.rotation.z = wobble * this.swayIntensity;
@@ -225,6 +228,7 @@ export class Player {
         this.armR.rotation.set(-2.6, 0, 0.3);
       }
     } else if (this.pose === 'ride') {
+      this.head.rotation.x = 0;
       // Debout sur la trottinette, mains sur le guidon
       this.legL.rotation.x = 0.1;
       this.legR.rotation.x = -0.25;

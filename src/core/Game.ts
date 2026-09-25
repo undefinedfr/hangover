@@ -12,6 +12,7 @@ import { spawnItems, pickupMessage } from '../items/ItemSpawner';
 import { Inventory } from '../items/Inventory';
 import { HUD } from '../ui/HUD';
 import { Minimap, type MapMarker } from '../ui/Minimap';
+import { AudioManager } from '../audio/AudioManager';
 import { DrunkBlur } from '../fx/DrunkBlur';
 import type { Vehicle } from '../vehicles/Vehicle';
 import { Car } from '../vehicles/Car';
@@ -41,6 +42,7 @@ export class Game {
   city: City | null = null;
   blur: DrunkBlur | null = null;
   readonly hud: HUD;
+  readonly audio = new AudioManager();
   items: Item[] = [];
   inventory = new Inventory();
   elapsed = 0;
@@ -81,6 +83,9 @@ export class Game {
     this.input = new Input(canvas);
     this.hud = new HUD(document.getElementById('ui')!);
     this.input.onKey = (code, e) => this.onKey(code, e);
+    this.hud.setMuted(this.audio.muted);
+    this.hud.onMute = () => this.audio.toggleMute();
+    this.onToggleMute = () => this.hud.setMuted(this.audio.toggleMute());
     window.addEventListener('resize', () => this.resize());
   }
 
@@ -113,6 +118,7 @@ export class Game {
 
     this.player = new Player(this.physics, rng.range(0, 100));
     this.player.swayIntensity = cfg.sway;
+    this.player.onStep = () => this.audio.step(this.isOnCarpet(this.player!.position));
     this.scene.add(this.player.object);
     const st = this.city.start;
     this.player.teleport(st.x, st.y + 0.05, st.z);
@@ -262,14 +268,19 @@ export class Game {
     const cfg = MODES[this.mode];
     const inv = this.inventory;
     if (!inv.has('clesMaison')) {
+      this.audio.locked();
       this.message('Fermé à clé. Tes clés de maison traînent quelque part en ville.', 4);
     } else if (!inv.has('lunettes')) {
+      this.audio.deny();
       this.message('Impossible de viser la serrure sans tes lunettes. Tu vois trois trous.', 4);
     } else if (cfg.walletRequired && !inv.has('portefeuille')) {
+      this.audio.deny();
       this.message('Et ton portefeuille ? Demain, sans papiers, ce sera pire.', 4);
     } else if (!inv.has('clesVoiture') || !this.arrivedByCar) {
+      this.audio.deny();
       this.message("Et la voiture ? Tu ne vas pas la laisser là-bas. Va la chercher et gare-toi devant.", 4.5);
     } else {
+      this.audio.door();
       this.message('Clic. La porte s\'ouvre. Ton lit est là, rien que pour toi.', 5);
       this.win();
     }
@@ -285,10 +296,12 @@ export class Game {
     const cfg = MODES[this.mode];
     if (v.name === 'voiture') {
       if (!this.inventory.has('clesVoiture')) {
+        this.audio.locked();
         this.message("C'est fermé. Évidemment.", 3);
         return;
       }
       if (cfg.walletRequired && !this.inventory.has('portefeuille')) {
+        this.audio.deny();
         this.message('Sans papiers, pas de volant. Ton portefeuille traîne forcément quelque part.', 4);
         return;
       }
@@ -304,6 +317,7 @@ export class Game {
     const player = this.player!;
     this.driving = v;
     v.driven = true;
+    this.audio.vehicleIn();
     player.setActive(false);
     player.pose = v.spec.pose;
     player.speed = 0;
@@ -339,6 +353,7 @@ export class Game {
 
   private collect(it: Item): void {
     it.collect();
+    this.audio.pickup();
     this.inventory.add(it.id);
     this.message(pickupMessage(it.id, it.label));
     this.onCollected(it.id);
@@ -566,6 +581,14 @@ export class Game {
     }
     for (const it of this.items) it.update(dt, this.camera, this.player.position);
     this.hud.setPrompt(this.state === 'playing' ? this.currentPrompt : '');
+    const drv = this.driving;
+    this.audio.update(dt, {
+      engine: drv && drv === this.car && this.state === 'playing' ? drv.speed : null,
+      roll: drv && drv !== this.car && this.state === 'playing' ? drv.speed : null,
+      rollPitch: drv?.name === 'tricycle' ? 300 : 900,
+      onCarpet: !!drv?.onCarpet,
+      playing: this.state === 'playing',
+    });
     this.hud.setTime(this.elapsed);
     this.hud.update(dt);
     this.cam.update(dt, this.player.position);
