@@ -49,7 +49,7 @@ Une trottinette (2× la vitesse de marche) et un tricycle (un peu plus lent, pé
 | Halo | visible de loin | à moins de 15 m | aucun |
 | Flou sans lunettes | léger | normal | fort, rayon net ~1,5 m |
 | Titubement | faible | moyen | fort |
-| Mini-carte | objets restants (téléphone déjà en poche) | voiture + maison | aucune |
+| Mini-carte | voiture + maison (téléphone déjà en poche) | voiture + maison, après le téléphone | aucune |
 | Cachettes | au sol, en évidence | derrière des props | recoins, sous les bancs, dans les poubelles |
 
 Chaque partie a une **seed** (`?seed=1234&mode=normal` dans l'URL) pour rejouer exactement la même ville. Les meilleurs temps par mode sont gardés dans le navigateur.

@@ -5,7 +5,8 @@ export type ItemId = 'lunettes' | 'telephone' | 'portefeuille' | 'clesVoiture' |
 export type InventoryId = ItemId | 'voiture';
 
 export type HidingStyle = 'open' | 'behindProps' | 'nooks';
-export type MinimapStyle = 'items' | 'carHouse' | 'none';
+/** always : dès le départ (téléphone déjà en poche) ; phone : après le téléphone ; none : jamais. */
+export type MinimapStyle = 'always' | 'phone' | 'none';
 
 export interface ModeConfig {
   label: string;
@@ -16,6 +17,8 @@ export interface ModeConfig {
   haloDistance: number;
   /** Intensité max du flou (0..1). */
   blurStrength: number;
+  /** Rayon du noyau de flou (en texels de la passe réduite). */
+  blurRadius: number;
   /** Rayon net autour du joueur (m). */
   sharpRadius: number;
   /** Intensité du titubement. */
@@ -32,10 +35,11 @@ export const MODES: Record<Mode, ModeConfig> = {
     blocks: 4,
     items: ['lunettes', 'clesVoiture', 'clesMaison'],
     haloDistance: 1000,
-    blurStrength: 0.5,
-    sharpRadius: 4,
+    blurStrength: 0.85,
+    blurRadius: 3.2,
+    sharpRadius: 3,
     sway: 0.35,
-    minimap: 'items',
+    minimap: 'always',
     hiding: 'open',
     walletRequired: false,
   },
@@ -45,10 +49,11 @@ export const MODES: Record<Mode, ModeConfig> = {
     blocks: 7,
     items: ['lunettes', 'telephone', 'portefeuille', 'clesVoiture', 'clesMaison'],
     haloDistance: 15,
-    blurStrength: 0.8,
-    sharpRadius: 3,
+    blurStrength: 1,
+    blurRadius: 4.5,
+    sharpRadius: 2.4,
     sway: 0.7,
-    minimap: 'carHouse',
+    minimap: 'phone',
     hiding: 'behindProps',
     walletRequired: true,
   },
@@ -59,6 +64,7 @@ export const MODES: Record<Mode, ModeConfig> = {
     items: ['lunettes', 'telephone', 'portefeuille', 'clesVoiture', 'clesMaison'],
     haloDistance: 0,
     blurStrength: 1,
+    blurRadius: 6.5,
     sharpRadius: 1.5,
     sway: 1.15,
     minimap: 'none',

@@ -13,6 +13,7 @@ import {
   sin,
   time,
   vec2,
+  dot,
 } from 'three/tsl';
 import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js';
 
@@ -39,18 +40,20 @@ export class DrunkBlur {
     renderer: THREE.WebGPURenderer,
     scene: THREE.Scene,
     private readonly camera: THREE.PerspectiveCamera,
-    opts: { strength: number; sharpRadius: number },
+    opts: { strength: number; radius: number; sharpRadius: number },
   ) {
     this.strength = opts.strength;
     this.sharpRadius.value = opts.sharpRadius;
-    this.falloff.value = 1.5 + opts.sharpRadius * 0.5;
+    this.falloff.value = 1.2 + opts.sharpRadius * 0.4;
     this.scenePass = pass(scene, camera);
     const color = this.scenePass.getTextureNode('output');
     const depth = this.scenePass.getTextureNode('depth');
 
     // Rayon du noyau proportionnel à l'intensité du mode
-    const radius = uniform(1 + opts.strength * 2.2);
-    this.blurNode = gaussianBlur(color, radius, 6, { resolutionScale: 0.5 });
+    // Deux passes chaînées à rayon modéré : flou fort mais sans motif en grille
+    const radius = uniform(opts.radius / 2);
+    const first = gaussianBlur(color, radius, 6, { resolutionScale: 0.5 });
+    this.blurNode = gaussianBlur(first, radius, 6, { resolutionScale: 0.5 });
 
     const screenUV = uv();
     const d = depth.sample(screenUV).r;
@@ -59,9 +62,12 @@ export class DrunkBlur {
     const f = smoothstep(this.sharpRadius, this.sharpRadius.add(this.falloff), dist).mul(this.amount);
 
     // Léger dédoublement de l'image floue qui « tangue » (vision trouble)
-    const wobble = vec2(sin(time.mul(0.9)), sin(time.mul(1.3).add(1.7))).mul(0.006).mul(this.amount);
+    const wobble = vec2(sin(time.mul(0.9)), sin(time.mul(1.3).add(1.7))).mul(0.014).mul(this.amount);
     const ghost = this.blurNode.getTextureNode().sample(screenUV.add(wobble));
-    const blurred = mix(this.blurNode, ghost, 0.5);
+    const doubled = mix(this.blurNode, ghost, 0.5);
+    // Lendemain de fête : couleurs délavées et lumière trop vive au loin
+    const lum = dot(doubled.rgb, vec3(0.299, 0.587, 0.114));
+    const blurred = vec4(mix(doubled.rgb, vec3(lum), 0.3).mul(1.12), 1);
 
     const mixed = mix(color, blurred, f);
     // Vignette discrète tant que les lunettes manquent

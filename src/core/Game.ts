@@ -159,14 +159,16 @@ export class Game {
     this.elapsed = 0;
     this.arrivedByCar = false;
     this.lastMessage = '';
+    this.messageLog = [];
     this.minimap = new Minimap(this.hud.minimap, this.city);
     // En facile, le téléphone est déjà dans ta poche : mini-carte dès le départ
-    this.minimapOn = cfg.minimap === 'items';
+    this.minimapOn = cfg.minimap === 'always';
     this.hud.showMinimap(this.minimapOn);
     if (!opts.showcase) this.message('Tu te réveilles sur un banc. Aïe. Où sont passées tes affaires ?', 6);
 
     this.blur = new DrunkBlur(this.renderer, this.scene, this.camera, {
       strength: cfg.blurStrength,
+      radius: cfg.blurRadius,
       sharpRadius: cfg.sharpRadius,
     });
 
@@ -223,6 +225,8 @@ export class Game {
 
   message(text: string, seconds?: number): void {
     this.lastMessage = text;
+    this.messageLog.push(text);
+    if (this.messageLog.length > 8) this.messageLog.shift();
     this.hud.message(text, seconds);
   }
 
@@ -402,6 +406,10 @@ export class Game {
 
   // --- Lecture pour le hook de test ---
   lastMessage = '';
+  messageLog: string[] = [];
+  get prompt(): string {
+    return this.currentPrompt;
+  }
 
   inventoryList(): string[] {
     return this.inventory.list();
@@ -466,13 +474,9 @@ export class Game {
   }
 
   private mapMarkers(): MapMarker[] {
-    const cfg = MODES[this.mode];
     const c = this.city!;
     const out: MapMarker[] = [{ x: c.house.door.x, z: c.house.door.z, kind: 'house' }];
     if (this.car && this.driving !== this.car) out.push({ x: this.car.position.x, z: this.car.position.z, kind: 'car' });
-    if (cfg.minimap === 'items') {
-      for (const it of this.items) if (!it.collected) out.push({ x: it.position.x, z: it.position.z, kind: 'item' });
-    }
     return out;
   }
 

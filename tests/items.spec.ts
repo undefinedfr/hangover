@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startGame, waitFrames, pressE } from './helpers';
+import { startGame, waitFrames, interactWhen } from './helpers';
 
 for (const mode of ['facile', 'normal'] as const) {
   test(`4. téléportation sur chaque objet + E : l'inventaire se remplit (${mode})`, async ({ page }) => {
@@ -15,7 +15,7 @@ for (const mode of ['facile', 'normal'] as const) {
       expect(ok).toBe(true);
       await waitFrames(page, 6);
       if (i === 0) await page.screenshot({ path: `tests/screenshots/item-${mode}-${id}.png` });
-      await pressE(page);
+      await interactWhen(page, 'Ramasser');
       await expect.poll(() => page.evaluate(() => window.__game.inventory)).toContain(id);
       const msg = await page.evaluate(() => window.__game.message);
       expect(msg.length).toBeGreaterThan(10);

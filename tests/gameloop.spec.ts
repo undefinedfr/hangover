@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startGame, waitFrames, pressE, watchErrors } from './helpers';
+import { startGame, waitFrames, watchErrors, interactWhen, sawMessage } from './helpers';
 
 test('1b. le menu s\'affiche avec les trois modes', async ({ page }) => {
   const errors = watchErrors(page);
@@ -21,36 +21,31 @@ test('5. scénario complet en facile via les hooks : victoire', async ({ page })
 
   // La porte refuse tant qu'on n'a rien
   await page.evaluate(() => window.__game.debug.teleportTo('maison'));
-  await waitFrames(page, 5);
-  await pressE(page);
-  await expect.poll(() => page.evaluate(() => window.__game.message)).toContain('Fermé à clé');
+  await interactWhen(page, 'porte');
+  await sawMessage(page, 'Fermé à clé');
 
   for (const id of ['lunettes', 'clesVoiture', 'clesMaison']) {
     await page.evaluate((n) => window.__game.debug.teleportTo(n), id);
-    await waitFrames(page, 4);
-    await pressE(page);
+    await interactWhen(page, 'Ramasser');
     await expect.poll(() => page.evaluate(() => window.__game.inventory)).toContain(id);
   }
 
   // À pied, la porte réclame la voiture
   await page.evaluate(() => window.__game.debug.teleportTo('maison'));
-  await waitFrames(page, 5);
-  await pressE(page);
-  await expect.poll(() => page.evaluate(() => window.__game.message)).toContain('voiture');
+  await interactWhen(page, 'porte');
+  await sawMessage(page, 'Et la voiture');
   expect(await page.evaluate(() => window.__game.state)).toBe('playing');
 
   // On récupère la voiture et on « conduit » jusqu'à la maison
   await page.evaluate(() => window.__game.debug.teleportTo('voiture'));
-  await waitFrames(page, 5);
-  await pressE(page);
+  await interactWhen(page, 'voiture');
   await expect.poll(() => page.evaluate(() => window.__game.inVehicle)).toBe('voiture');
   await page.evaluate(() => window.__game.debug.teleportTo('maison'));
-  await expect.poll(() => page.evaluate(() => window.__game.message)).toContain('devant chez toi');
-  await pressE(page);
+  await sawMessage(page, 'devant chez toi');
+  await interactWhen(page, 'Descendre');
   await expect.poll(() => page.evaluate(() => window.__game.inVehicle)).toBe(null);
   await page.evaluate(() => window.__game.debug.teleportTo('maison'));
-  await waitFrames(page, 5);
-  await pressE(page);
+  await interactWhen(page, 'porte');
   await expect.poll(() => page.evaluate(() => window.__game.state)).toBe('won');
   await expect(page.getByTestId('end')).toBeVisible();
   await expect(page.getByTestId('end')).toContainText('Facile');
@@ -84,7 +79,7 @@ test('M6. le téléphone affiche la mini-carte en normal', async ({ page }) => {
   await expect(page.locator('.hud-minimap')).toBeHidden();
   await page.evaluate(() => window.__game.debug.teleportTo('telephone'));
   await waitFrames(page, 4);
-  await pressE(page);
+  await interactWhen(page, 'Ramasser');
   await expect(page.locator('.hud-minimap')).toBeVisible();
   await waitFrames(page, 10);
   await page.screenshot({ path: 'tests/screenshots/minimap-normal.png' });

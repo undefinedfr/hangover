@@ -33,6 +33,17 @@ export async function waitFrames(page: Page, n = 10): Promise<void> {
   );
 }
 
+/** Attend que l'invite d'interaction attendue soit active, puis appuie sur E. */
+export async function interactWhen(page: Page, promptPart: string): Promise<void> {
+  await expect.poll(() => page.evaluate(() => window.__game.prompt)).toContain(promptPart);
+  await pressE(page);
+}
+
+/** Vrai si un des derniers messages contient le texte. */
+export async function sawMessage(page: Page, text: string): Promise<void> {
+  await expect.poll(() => page.evaluate(() => window.__game.messages.join(' | '))).toContain(text);
+}
+
 export async function pressE(page: Page): Promise<void> {
   await page.keyboard.press('KeyE');
   await waitFrames(page, 4);

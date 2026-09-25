@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startGame, waitFrames, pressE, sharpness } from './helpers';
+import { startGame, waitFrames, interactWhen, sharpness } from './helpers';
 
 test('M4. flou sans lunettes, net après les avoir ramassées', async ({ page }) => {
   await page.goto('./');
@@ -10,7 +10,7 @@ test('M4. flou sans lunettes, net après les avoir ramassées', async ({ page })
   expect(await page.evaluate(() => window.__game.blur)).toBeGreaterThan(0.5);
   const before = await page.screenshot({ path: 'tests/screenshots/blur-avant-lunettes.png' });
 
-  await pressE(page);
+  await interactWhen(page, 'Ramasser');
   await expect.poll(() => page.evaluate(() => window.__game.inventory)).toContain('lunettes');
   await expect.poll(() => page.evaluate(() => window.__game.blur)).toBe(0);
   await waitFrames(page, 10);

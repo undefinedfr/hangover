@@ -32,8 +32,8 @@ export function spawnItems(seed: number, city: City, cfg: ModeConfig): Item[] {
       if (p.distanceTo(door) < 20 * relax) return false;
       if (p.distanceTo(car) < 8) return false;
       if (chosen.some((c) => flat(c).distanceTo(p) < minSpacing)) return false;
-      // Sans lunettes tout est flou : on ne les cache pas au bout du monde
-      if (id === 'lunettes' && p.distanceTo(start) > cityScale * 0.8) return false;
+      // Sans lunettes tout est flou : elles sont tout près du banc de départ
+      if (id === 'lunettes' && p.distanceTo(start) > 38 / relax) return false;
       return true;
     };
     return pool.find(ok) ?? (relax < 0.3 ? fallback.find(ok) : undefined);

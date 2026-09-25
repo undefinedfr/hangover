@@ -14,6 +14,10 @@ export interface GameHook {
   readonly backend: string;
   readonly blur: number;
   readonly message: string;
+  /** Derniers messages affichés (le plus récent en dernier). */
+  readonly messages: string[];
+  /** Invite d'interaction courante (« E Ramasser : … »). */
+  readonly prompt: string;
   debug: {
     startGame(mode: Mode, seed: number): void;
     teleportTo(name: string): boolean;
@@ -65,6 +69,12 @@ export function installHook(game: Game, start: (mode: Mode, seed: number) => voi
     },
     get message() {
       return game.lastMessage;
+    },
+    get messages() {
+      return [...game.messageLog];
+    },
+    get prompt() {
+      return game.prompt;
     },
     debug: {
       startGame: (mode, seed) => start(mode, seed),
