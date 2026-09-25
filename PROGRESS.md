@@ -16,3 +16,9 @@
 - Tests : pas de traversée des façades, génération normale (7×7) et hardcore (11×11).
 
 Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de dev (pas de GPU, rendu logiciel ~10 fps) ; la conception (instancing, ombres locales) vise un laptop récent.
+
+## M3 — Objets et inventaire ✅
+- Modèles procéduraux : lunettes, téléphone, portefeuille, clés de voiture (télécommande), clés de maison (porte-clés maison). Flottement, rotation, halo selon le mode.
+- Placement seedé selon le mode (évidence / derrière des props / recoins).
+- Ramassage avec E (invite « E Ramasser : … »), message d'humour par objet, icônes grisées puis colorées, panneau d'inventaire (Tab), chrono.
+- Test 4 vert (facile et normal).

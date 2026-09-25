@@ -9,6 +9,7 @@ import {
   normalWorld,
   positionWorld,
   select,
+  sign,
   step,
   vec3,
   color,
@@ -35,7 +36,10 @@ export function buildingMaterial(): THREE.MeshStandardNodeMaterial {
   // Encadrement plus clair autour des fenêtres
   const frame = step(0.22, u).mul(step(u, 0.78)).mul(step(0.24, v)).mul(step(v, 0.88)).mul(upper).mul(wall);
 
-  const cell = floor(horiz.div(colW)).add(floor(wp.y.div(rowH)).mul(57.0)).add(floor(select(sideways, wp.x, wp.z)).mul(13.0));
+  // Pas de coordonnée de profondeur dans le hash : sur une façade elle est constante et
+  // tombe parfois pile sur un entier (floor instable => grésillement).
+  const faceSign = sign(n.x.add(n.z)).mul(13.0).add(select(sideways, float(29.0), float(0.0)));
+  const cell = floor(horiz.div(colW)).add(floor(wp.y.div(rowH)).mul(57.0)).add(faceSign);
   const lit = step(0.86, hash(cell));
   const glass = mix(vec3(0.18, 0.22, 0.32), vec3(0.95, 0.8, 0.55), lit);
 

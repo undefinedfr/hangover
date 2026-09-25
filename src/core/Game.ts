@@ -5,9 +5,21 @@ import { Physics, initPhysics } from './Physics';
 import { RNG } from './rng';
 import { MODES, type Mode, type State } from './GameState';
 import { Environment } from '../world/Environment';
-import { Player } from '../player/Player';
+import { Player, PLAYER_CENTER } from '../player/Player';
 import { ThirdPersonCamera } from '../player/ThirdPersonCamera';
 import { generateCity, type City } from '../world/CityGenerator';
+import { Item } from '../items/Item';
+import { spawnItems, pickupMessage } from '../items/ItemSpawner';
+import { Inventory } from '../items/Inventory';
+import { HUD } from '../ui/HUD';
+import { ITEM_LABELS, type InventoryId, type ItemId } from './GameState';
+
+const INTERACT_RADIUS = 1.9;
+
+interface Interaction {
+  prompt: string;
+  run: () => void;
+}
 
 const FIXED_DT = 1 / 60;
 const MAX_STEPS = 5;
@@ -23,6 +35,10 @@ export class Game {
   env: Environment | null = null;
   city: City | null = null;
   private pipeline: THREE.RenderPipeline | null = null;
+  readonly hud: HUD;
+  items: Item[] = [];
+  inventory = new Inventory();
+  elapsed = 0;
 
   state: State = 'menu';
   mode: Mode = 'facile';
@@ -30,6 +46,7 @@ export class Game {
   fps = 0;
   backend = 'unknown';
 
+  private currentPrompt = '';
   private accumulator = 0;
   private last = 0;
   private fpsFrames = 0;
@@ -47,6 +64,8 @@ export class Game {
     this.renderer.toneMappingExposure = 1.05;
     this.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 1200);
     this.input = new Input(canvas);
+    this.hud = new HUD(document.getElementById('ui')!);
+    this.input.onKey = (code, e) => this.onKey(code, e);
     window.addEventListener('resize', () => this.resize());
   }
 
@@ -87,6 +106,18 @@ export class Game {
     this.cam.yaw = st.rotY;
     this.physics.step();
 
+    this.inventory = new Inventory();
+    this.inventory.onChange = () => this.hud.updateInventory(this.inventory.list());
+    this.items = spawnItems(seed, this.city, cfg);
+    for (const it of this.items) this.scene.add(it.object);
+    const slots: InventoryId[] = [...cfg.items, 'voiture'];
+    this.hud.setup(slots);
+    this.hud.updateInventory([]);
+    this.hud.show(true);
+    this.elapsed = 0;
+    this.lastMessage = '';
+    this.message('Tu te réveilles sur un banc. Aïe. Où sont passées tes affaires ?', 6);
+
     const scenePass = pass(this.scene, this.camera);
     this.pipeline = new THREE.RenderPipeline(this.renderer, scenePass);
 
@@ -96,6 +127,7 @@ export class Game {
   }
 
   private teardown(): void {
+    this.items = [];
     this.player?.dispose();
     this.player = null;
     this.physics?.dispose();
@@ -108,11 +140,51 @@ export class Game {
     });
   }
 
+  message(text: string, seconds?: number): void {
+    this.lastMessage = text;
+    this.hud.message(text, seconds);
+  }
+
+  private onKey(code: string, e: KeyboardEvent): void {
+    if (this.state !== 'playing') return;
+    if (code === 'Tab') {
+      e.preventDefault();
+      this.hud.togglePanel();
+    }
+  }
+
+  /** Interaction la plus proche du joueur (objet, véhicule, porte…). */
+  private findInteraction(): Interaction | null {
+    const player = this.player!;
+    const p = player.position;
+    let best: Interaction | null = null;
+    let bestD = INTERACT_RADIUS;
+    for (const it of this.items) {
+      if (it.collected) continue;
+      const d = Math.hypot(it.position.x - p.x, it.position.z - p.z);
+      if (d < bestD && Math.abs(it.position.y - p.y) < 2) {
+        bestD = d;
+        best = { prompt: `E Ramasser : ${ITEM_LABELS[it.id].toLowerCase()}`, run: () => this.collect(it) };
+      }
+    }
+    return best;
+  }
+
+  private collect(it: Item): void {
+    it.collect();
+    this.inventory.add(it.id);
+    this.message(pickupMessage(it.id, it.label));
+    this.onCollected(it.id);
+  }
+
+  /** Effets de gameplay d'un ramassage. */
+  private onCollected(_id: ItemId): void {}
+
   // --- Lecture pour le hook de test ---
   lastMessage = '';
 
   inventoryList(): string[] {
-    return [];
+    return this.inventory.list();
   }
 
   playerPosition(): THREE.Vector3 {
@@ -138,11 +210,33 @@ export class Game {
       voitureSpawn: c.carSpawn,
       cinema: c.tricycleSpawn,
     };
+    const item = this.items.find((it) => it.id === name && !it.collected);
+    if (item) {
+      const spot = this.freeSpotNear(item.position.x, item.position.z, [0.9, 1.3, 1.6]);
+      this.player.teleport(spot.x, spot.y, spot.z);
+      this.cam?.snap();
+      return true;
+    }
     const p = places[name];
     if (!p) return false;
     this.player.teleport(p.x, p.y + 0.05, p.z);
     this.cam?.snap();
     return true;
+  }
+
+  /** Position libre (capsule du joueur hors du décor) autour d'un point. */
+  freeSpotNear(x: number, z: number, radii: number[]): THREE.Vector3 {
+    const physics = this.physics!;
+    for (const r of radii) {
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        const px = x + Math.cos(a) * r;
+        const pz = z + Math.sin(a) * r;
+        const y = 0.25;
+        if (!physics.capsuleBlocked(px, y + PLAYER_CENTER, pz, 0.5, 0.36)) return new THREE.Vector3(px, y, pz);
+      }
+    }
+    return new THREE.Vector3(x, 1.5, z);
   }
 
   private frame(now: number): void {
@@ -187,6 +281,11 @@ export class Game {
     }
     player.update(dt, mx, mz, this.input.run, this.input.consume('Space'));
     this.physics!.step();
+    this.elapsed += dt;
+
+    const interaction = this.findInteraction();
+    this.currentPrompt = interaction?.prompt ?? '';
+    if (this.input.consume('KeyE') && interaction) interaction.run();
   }
 
   private frameUpdate(dt: number): void {
@@ -196,6 +295,10 @@ export class Game {
       this.cam.rotate(look.dx, look.dy);
     }
     this.player.animate(dt);
+    for (const it of this.items) it.update(dt, this.camera, this.player.position);
+    this.hud.setPrompt(this.state === 'playing' ? this.currentPrompt : '');
+    this.hud.setTime(this.elapsed);
+    this.hud.update(dt);
     this.cam.update(dt, this.player.position);
     this.env?.follow(this.player.position, this.camera);
   }

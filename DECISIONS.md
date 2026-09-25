@@ -15,3 +15,11 @@
 - Les houppiers des arbres n'ont pas de collision (seul le tronc en a) : la caméra peut les traverser.
 - Bords de la ville : haie + murs invisibles ; silhouettes d'immeubles lointaines (sans collision) pour l'horizon.
 - Les tests utilisent des attentes « par sondage » (expect.poll) plutôt que des durées fixes : le rendu logiciel SwiftShader tourne à ~5-10 fps et le pas fixe est plafonné.
+- Cachettes générées par la ville et typées : `open` (trottoir, allées, parking), `behind` (derrière banc, arbre, buisson, haie, voiture garée), `nook` (sous un banc, dans une poubelle, fond de ruelle, fond du hall du cinéma, entre deux voitures). Facile → open, normal → behind, hardcore → nook.
+- Espacement minimal entre objets ≈ ¼ de la taille de la ville (assoupli si besoin), rien à moins de 12 m du départ ni 20 m de la porte ; les lunettes restent dans les 80 % du rayon autour du départ.
+- Le message de ramassage combine une réplique par objet et la cachette (« Tes lunettes étaient dans une poubelle du trottoir. Classique. »).
+- Halo : disque additif + colonne de lumière ; portée « infinie » en facile, 15 m en normal (fondu), aucun en hardcore.
+- Icônes HUD en SVG inline (pas d'emoji, rendu identique partout).
+- Ombres : bias -0,001 / normalBias 0,08 pour supprimer l'acné d'ombre sur les façades rasantes.
+- Hash des fenêtres sans la coordonnée de profondeur de la façade (instable quand elle tombe sur un entier).
+- `teleportTo(objet)` place le joueur sur une position libre à ~1 m de l'objet (test de chevauchement de capsule).
