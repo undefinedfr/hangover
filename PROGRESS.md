@@ -27,3 +27,8 @@ Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de de
 - Post-process TSL : net dans un rayon autour du joueur (4 m / 3 m / 1,5 m selon le mode), flou au-delà ; transition d'environ 1 s quand on ramasse les lunettes.
 - Titubement (dérive latérale + roulis), qui diminue quand on reprend ses esprits.
 - Test : captures avant/après lunettes (`tests/screenshots/blur-*.png`) avec mesure de netteté (≈ ×2,5).
+
+## M5 — Véhicules ✅
+- Voiture verrouillée (« C'est fermé. Évidemment. »), puis conduite arcade avec les clés (accélérer, freiner, marche arrière, frein à main Espace, collisions avec les immeubles et les voitures garées).
+- Trottinette (2× la marche) et tricycle (pédalage animé, détection du sol moquette pour le son en M7).
+- Montée / descente avec E, sans rester coincé (tests).

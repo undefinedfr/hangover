@@ -26,3 +26,10 @@
 - Flou : `pass()` → `gaussianBlur` (demi-résolution, rayon selon le mode) ; distance au joueur reconstruite par `getViewPosition` depuis la profondeur de la passe, mélange par `smoothstep(rayonNet, rayonNet + fondu)`. Ajout d'un léger dédoublement ondulant et d'une vignette, proportionnels au flou. Une fois net, la sortie du pipeline redevient la passe de scène seule (coût nul).
 - Titubement : dérive latérale (somme de sinus déphasés par la seed) proportionnelle à la vitesse + roulis du buste + léger roulis caméra. Réduit à 30 % quand téléphone + portefeuille sont trouvés (en facile, où ils n'existent pas : avec les lunettes).
 - Les lunettes apparaissent sur le visage du personnage une fois ramassées.
+- Véhicules : corps cinématiques Rapier (round cuboid) déplacés par leur propre `KinematicCharacterController` (autostep 0,32 m pour les trottoirs, glissement le long des murs, perte de vitesse au choc). Une rotation qui ferait chevaucher le décor est refusée (test d'intersection).
+- Vitesses max : voiture 17 m/s (~60 km/h), trottinette 8 m/s (2× la marche), tricycle 7 m/s.
+- En normal/hardcore, la voiture refuse de démarrer sans portefeuille (« Sans papiers, pas de volant »). La voiture entre dans l'inventaire au premier démarrage.
+- Descente : on teste des positions libres (côtés, arrière, avant) avec la capsule du joueur ; en dernier recours on dépose le joueur sur le toit.
+- En véhicule, la caméra se replace derrière après 0,8 s sans mouvement de souris.
+- Le tricycle démarre dans le hall moquetté du cinéma (clin d'œil, sans référence visuelle directe).
+- La voiture du joueur est turquoise avec un cône de chantier sur le toit, pour qu'on la reconnaisse.

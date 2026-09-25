@@ -12,6 +12,10 @@ import { spawnItems, pickupMessage } from '../items/ItemSpawner';
 import { Inventory } from '../items/Inventory';
 import { HUD } from '../ui/HUD';
 import { DrunkBlur } from '../fx/DrunkBlur';
+import type { Vehicle } from '../vehicles/Vehicle';
+import { Car } from '../vehicles/Car';
+import { Scooter } from '../vehicles/Scooter';
+import { Tricycle } from '../vehicles/Tricycle';
 import { ITEM_LABELS, type InventoryId, type ItemId } from './GameState';
 
 const INTERACT_RADIUS = 1.9;
@@ -39,6 +43,10 @@ export class Game {
   items: Item[] = [];
   inventory = new Inventory();
   elapsed = 0;
+  vehicles: Vehicle[] = [];
+  car: Car | null = null;
+  driving: Vehicle | null = null;
+  private lookIdle = 0;
 
   state: State = 'menu';
   mode: Mode = 'facile';
@@ -107,6 +115,14 @@ export class Game {
     this.cam.sway = cfg.sway;
     this.physics.step();
 
+    const c = this.city;
+    this.car = new Car(this.physics, c.carSpawn.x, c.carSpawn.y, c.carSpawn.z, c.carSpawn.rotY);
+    const scooter = new Scooter(this.physics, c.scooterSpawn.x, c.scooterSpawn.y, c.scooterSpawn.z, c.scooterSpawn.rotY);
+    const tricycle = new Tricycle(this.physics, c.tricycleSpawn.x, c.tricycleSpawn.y, c.tricycleSpawn.z, c.tricycleSpawn.rotY);
+    this.vehicles = [this.car, scooter, tricycle];
+    for (const v of this.vehicles) this.scene.add(v.object);
+    this.driving = null;
+
     this.inventory = new Inventory();
     this.inventory.onChange = () => this.hud.updateInventory(this.inventory.list());
     this.items = spawnItems(seed, this.city, cfg);
@@ -131,6 +147,10 @@ export class Game {
 
   private teardown(): void {
     this.items = [];
+    for (const v of this.vehicles) v.dispose();
+    this.vehicles = [];
+    this.car = null;
+    this.driving = null;
     this.player?.dispose();
     this.player = null;
     this.physics?.dispose();
@@ -160,8 +180,20 @@ export class Game {
   private findInteraction(): Interaction | null {
     const player = this.player!;
     const p = player.position;
+    if (this.driving) {
+      const v = this.driving;
+      const from = { voiture: 'de la voiture', trottinette: 'de la trottinette', tricycle: 'du tricycle' }[v.name];
+      return { prompt: `E Descendre ${from}`, run: () => this.exitVehicle() };
+    }
     let best: Interaction | null = null;
     let bestD = INTERACT_RADIUS;
+    for (const v of this.vehicles) {
+      const d = Math.hypot(v.position.x - p.x, v.position.z - p.z) - v.spec.half[2];
+      if (d < bestD + 0.4) {
+        bestD = d - 0.4;
+        best = { prompt: this.vehiclePrompt(v), run: () => this.tryEnter(v) };
+      }
+    }
     for (const it of this.items) {
       if (it.collected) continue;
       const d = Math.hypot(it.position.x - p.x, it.position.z - p.z);
@@ -172,6 +204,68 @@ export class Game {
     }
     return best;
   }
+
+  private vehiclePrompt(v: Vehicle): string {
+    if (v.name === 'voiture') return this.inventory.has('clesVoiture') ? 'E Monter dans la voiture' : 'E Ouvrir la voiture';
+    if (v.name === 'trottinette') return 'E Monter sur la trottinette';
+    return 'E Enfourcher le tricycle';
+  }
+
+  private tryEnter(v: Vehicle): void {
+    const cfg = MODES[this.mode];
+    if (v.name === 'voiture') {
+      if (!this.inventory.has('clesVoiture')) {
+        this.message("C'est fermé. Évidemment.", 3);
+        return;
+      }
+      if (cfg.walletRequired && !this.inventory.has('portefeuille')) {
+        this.message('Sans papiers, pas de volant. Ton portefeuille traîne forcément quelque part.', 4);
+        return;
+      }
+      if (!this.inventory.has('voiture')) {
+        this.inventory.add('voiture');
+        this.message('Ta voiture ! Avec un cône de chantier sur le toit. Aucun souvenir de ça.', 4.5);
+      }
+    }
+    this.enterVehicle(v);
+  }
+
+  enterVehicle(v: Vehicle): void {
+    const player = this.player!;
+    this.driving = v;
+    v.driven = true;
+    player.setActive(false);
+    player.pose = v.spec.pose;
+    player.speed = 0;
+    this.cam!.distance = v.spec.cameraDistance;
+    this.onVehicleChange?.(v);
+  }
+
+  exitVehicle(): void {
+    const v = this.driving;
+    if (!v) return;
+    const player = this.player!;
+    v.speed = 0;
+    v.driven = false;
+    this.driving = null;
+    let spot: THREE.Vector3 | null = null;
+    for (const c of v.exitCandidates()) {
+      if (!this.physics!.capsuleBlocked(c.x, v.position.y + 0.1 + PLAYER_CENTER, c.z, 0.5, 0.36)) {
+        spot = c;
+        break;
+      }
+    }
+    // En dernier recours : sur le toit, la gravité fera le reste
+    spot ??= v.position.clone().setY(v.position.y + v.spec.half[1] * 2 + 0.3);
+    player.pose = 'walk';
+    player.setActive(true);
+    player.teleport(spot.x, Math.max(spot.y, v.position.y) + 0.05, spot.z);
+    player.facing = v.yaw;
+    this.cam!.distance = 5.5;
+    this.onVehicleChange?.(null);
+  }
+
+  onVehicleChange: ((v: Vehicle | null) => void) | null = null;
 
   private collect(it: Item): void {
     it.collect();
@@ -212,7 +306,7 @@ export class Game {
   }
 
   vehicleName(): string | null {
-    return null;
+    return this.driving ? this.driving.name : null;
   }
 
   blurAmount(): number {
@@ -230,6 +324,27 @@ export class Game {
       voitureSpawn: c.carSpawn,
       cinema: c.tricycleSpawn,
     };
+    const vehicle = this.vehicles.find((v) => v.name === name);
+    if (vehicle) {
+      if (this.driving) this.exitVehicle();
+      const spot = this.freeSpotNear(vehicle.position.x, vehicle.position.z, [vehicle.spec.half[2] + 0.9, vehicle.spec.half[2] + 1.6, 3.5]);
+      this.player.teleport(spot.x, spot.y, spot.z);
+      this.cam?.snap();
+      return true;
+    }
+    if (name === 'maison') {
+      if (this.driving) {
+        const s = this.freeSpotNear(c.house.front.x, c.house.front.z, [0, 2, 4, 6]);
+        const dx = c.house.door.x - c.house.front.x;
+        const dz = c.house.door.z - c.house.front.z;
+        // Garé le long de la rue, parallèle au trottoir
+        this.driving.place(s.x, 0.05, s.z, Math.atan2(dx, dz) + Math.PI / 2);
+      } else {
+        this.player.teleport(c.house.door.x, c.house.door.y + 0.05, c.house.door.z);
+      }
+      this.cam?.snap();
+      return true;
+    }
     const item = this.items.find((it) => it.id === name && !it.collected);
     if (item) {
       const spot = this.freeSpotNear(item.position.x, item.position.z, [0.9, 1.3, 1.6]);
@@ -242,6 +357,10 @@ export class Game {
     this.player.teleport(p.x, p.y + 0.05, p.z);
     this.cam?.snap();
     return true;
+  }
+
+  isOnCarpet(p: THREE.Vector3): boolean {
+    return !!this.city?.carpets.some((r) => p.x > r.minX && p.x < r.maxX && p.z > r.minZ && p.z < r.maxZ);
   }
 
   /** Position libre (capsule du joueur hors du décor) autour d'un point. */
@@ -299,7 +418,23 @@ export class Game {
       mx /= l;
       mz /= l;
     }
-    player.update(dt, mx, mz, this.input.run, this.input.consume('Space'));
+    const v = this.driving;
+    if (v) {
+      v.drive(dt, axes.y, -axes.x, this.input.isDown('Space'));
+      (v as Vehicle & { steerVisual: number }).steerVisual = -axes.x;
+      const seat = v.seatPosition(this.tmp);
+      player.teleport(seat.x, seat.y, seat.z);
+      player.facing = v.yaw;
+      player.speed = 0;
+      player.pedalSpeed = v.speed / 0.27;
+      this.input.consume('Space');
+    } else {
+      player.update(dt, mx, mz, this.input.run, this.input.consume('Space'));
+    }
+    for (const other of this.vehicles) {
+      if (other !== v) other.idle(dt);
+      other.onCarpet = this.isOnCarpet(other.position);
+    }
     this.physics!.step();
     this.elapsed += dt;
 
@@ -313,7 +448,16 @@ export class Game {
     if (this.state === 'playing') {
       const look = this.input.takeLook();
       this.cam.rotate(look.dx, look.dy);
+      this.lookIdle = look.dx !== 0 || look.dy !== 0 ? 0 : this.lookIdle + dt;
+      // En véhicule, la caméra se replace doucement derrière
+      const v = this.driving;
+      if (v && this.lookIdle > 0.8 && Math.abs(v.speed) > 1) {
+        let d = v.yaw - this.cam.yaw;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        this.cam.yaw += d * Math.min(1, dt * 2.5);
+      }
     }
+    for (const v of this.vehicles) v.animate(dt);
     this.player.animate(dt);
     for (const it of this.items) it.update(dt, this.camera, this.player.position);
     this.hud.setPrompt(this.state === 'playing' ? this.currentPrompt : '');
