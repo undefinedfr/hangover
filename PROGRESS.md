@@ -61,3 +61,15 @@ Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de de
 - Pas de circulation ni de piétons ; les houppiers des arbres n'ont pas de collision (la caméra peut les traverser).
 - Durée « ~5 min » du mode facile estimée à partir des distances (≈ 400 m à pied + 150 m en voiture sur 5 seeds), pas chronométrée en jeu réel.
 - La mini-carte est orientée nord (elle ne tourne pas avec la caméra).
+
+## Retours de test (itération 2)
+- ✅ Mini-carte : plus aucun objet affiché (voiture + maison seulement).
+- ✅ Lunettes à moins de ~38 m du banc de départ.
+- ✅ Flou sans lunettes beaucoup plus fort (deux passes gaussiennes, zone nette réduite, couleurs délavées au loin).
+- ✅ Refonte artistique « Paris au petit matin » : façades haussmanniennes et faubourgs procédurales, toits mansardés, balcons, stores, mobilier parisien, platanes, voitures arrondies, sols texturés, nuages, personnage détaillé, maison bleue, AO + étalonnage.
+- ✅ Réglage « Graphismes : détaillés / légers » dans le menu (AO, résolution, distance de vue, bruits procéduraux).
+- ✅ Chargement : pré-compilation des shaders et premier rendu derrière l'écran « Réveil en cours… » (plus d'à-coups au premier regard).
+- Performance : ~0,3 M triangles dessinés par image en facile, ~0,5 M en normal, ~0,85 M en hardcore (ombres comprises), 240 à 520 appels de dessin grâce au découpage en tuiles.
+
+Limites connues (mises à jour) :
+- Les tests tournent en rendu logiciel (SwiftShader, qualité « légers », 960×540) : chaque démarrage de partie y coûte 10 à 30 s de compilation côté processus GPU, la suite complète prend ~30 min. Sur un vrai GPU le chargement est de l'ordre de la seconde.

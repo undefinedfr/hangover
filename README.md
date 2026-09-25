@@ -2,7 +2,7 @@
 
 Jeu 3D dans le navigateur, vue à la 3e personne. Tu te réveilles sur un banc public après une soirée trop arrosée. Tes lunettes, ton téléphone, ton portefeuille, tes clés… tout a disparu. Retrouve tes affaires éparpillées dans la ville, récupère ta voiture (celle avec un cône de chantier sur le toit) et rentre chez toi.
 
-Univers low poly coloré, humour léger, tout est généré par le code : aucun asset externe.
+Un Paris stylisé au petit matin (immeubles haussmanniens, toits en zinc, colonnes Morris, bancs verts, platanes), humour léger, et tout est généré par le code : aucun asset externe.
 
 **Démo :** https://undefinedfr.github.io/hangover/ (une fois GitHub Pages activé, voir [Déploiement](#déploiement))
 
@@ -51,6 +51,8 @@ Une trottinette (2× la vitesse de marche) et un tricycle (un peu plus lent, pé
 | Titubement | faible | moyen | fort |
 | Mini-carte | voiture + maison (téléphone déjà en poche) | voiture + maison, après le téléphone | aucune |
 | Cachettes | au sol, en évidence | derrière des props | recoins, sous les bancs, dans les poubelles |
+
+Un bouton **Graphismes : détaillés / légers** dans le menu adapte le rendu aux machines modestes (pas d'occlusion ambiante, résolution 1×, vue plus courte). On peut aussi forcer `?quality=low`.
 
 Chaque partie a une **seed** (`?seed=1234&mode=normal` dans l'URL) pour rejouer exactement la même ville. Les meilleurs temps par mode sont gardés dans le navigateur.
 

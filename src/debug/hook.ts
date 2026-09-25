@@ -25,6 +25,8 @@ export interface GameHook {
     camera(distance: number, pitch: number, yaw?: number): void;
     teleportXYZ(x: number, y: number, z: number): void;
     elapsed(): number;
+    stats(): { triangles: number; calls: number };
+    budget(): Array<{ name: string; tris: number; count: number }>;
     layout(): { start: P; house: P; car: P; items: Array<P & { id: string }> };
     footprints(): Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
   };
@@ -81,6 +83,26 @@ export function installHook(game: Game, start: (mode: Mode, seed: number) => voi
       teleportTo: (name) => game.debugTeleport(name),
       interact: () => game.input.press('KeyE'),
       elapsed: () => game.elapsed,
+      budget: () => {
+        const out: Array<{ name: string; tris: number; count: number }> = [];
+        game.scene.traverse((o) => {
+          const m = o as unknown as { isMesh?: boolean; geometry?: { index: { count: number } | null; attributes: { position: { count: number } } }; count?: number; isInstancedMesh?: boolean };
+          if (!m.isMesh || !m.geometry) return;
+          const t = (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3;
+          const n = m.isInstancedMesh ? (m.count ?? 1) : 1;
+          const name = m.isInstancedMesh ? `inst${t.toFixed(0)}` : `mesh`;
+          const prev = out.find((o) => o.name === name);
+          if (prev) {
+            prev.tris += t * n;
+            prev.count += n;
+          } else out.push({ name, tris: t * n, count: n });
+        });
+        return out.sort((a, b) => b.tris - a.tris).slice(0, 15);
+      },
+      stats: () => {
+        const r = game.renderer.info.render as unknown as { triangles: number; drawCalls?: number; calls?: number };
+        return { triangles: r.triangles, calls: r.drawCalls ?? r.calls ?? 0 };
+      },
       layout: () => {
         const c = game.city!;
         return {

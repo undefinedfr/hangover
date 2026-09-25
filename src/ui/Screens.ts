@@ -1,5 +1,6 @@
 import { MODES, type Mode } from '../core/GameState';
 import { formatTime } from './HUD';
+import { getQuality, setQuality } from '../core/Quality';
 
 const BEST_KEY = 'gueule-de-bois.best.v1';
 
@@ -52,6 +53,7 @@ export class Menu {
           <p class="tagline">Tu te réveilles sur un banc. Tes lunettes, tes clés, ta voiture : tout a disparu. Rentre chez toi.</p>
           <div class="modes" role="radiogroup" aria-label="Difficulté"></div>
           <button class="btn primary play" data-testid="play">Jouer</button>
+          <button class="quality-toggle" data-testid="quality"></button>
           <p class="touch-hint">Joystick à gauche pour marcher, glisse à droite pour tourner la caméra, gros bouton pour agir.</p>
           <details class="controls">
             <summary>Contrôles</summary>
@@ -67,6 +69,16 @@ export class Menu {
       </div>`);
     parent.appendChild(this.root);
     this.root.querySelector('.play')!.addEventListener('click', () => this.onPlay?.(this.selected));
+    const q = this.root.querySelector<HTMLButtonElement>('.quality-toggle')!;
+    const label = () => {
+      q.textContent = getQuality() === 'haute' ? 'Graphismes : détaillés' : 'Graphismes : légers';
+    };
+    label();
+    q.addEventListener('click', () => {
+      setQuality(getQuality() === 'haute' ? 'basse' : 'haute');
+      // Le rendu est configuré au démarrage : on recharge pour appliquer
+      location.reload();
+    });
     this.render();
   }
 

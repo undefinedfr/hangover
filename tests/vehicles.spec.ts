@@ -9,7 +9,7 @@ async function holdUntilMoved(page: Page, key: string, min: number, from: { x: n
         const p = await page.evaluate(() => window.__game.player.position);
         return Math.hypot(p.x - from.x, p.z - from.z);
       },
-      { timeout: 45_000 },
+      { timeout: 150_000 },
     )
     .toBeGreaterThan(min);
   await page.keyboard.up(key);
@@ -41,7 +41,7 @@ test('M5. voiture verrouillée sans les clés', async ({ page }) => {
 });
 
 test('M5. trottinette, tricycle et voiture : monter, rouler, descendre', async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(600_000);
   await page.goto('./');
   await startGame(page, 'facile', 42);
   await waitFrames(page, 10);

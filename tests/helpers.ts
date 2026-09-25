@@ -11,13 +11,16 @@ export function watchErrors(page: Page): string[] {
 }
 
 export async function waitForHook(page: Page): Promise<void> {
-  await page.waitForFunction(() => typeof window.__game !== 'undefined', null, { timeout: 60_000 });
+  await page.waitForFunction(() => typeof window.__game !== 'undefined', null, { timeout: 120_000 });
 }
 
 export async function startGame(page: Page, mode: 'facile' | 'normal' | 'hardcore', seed: number): Promise<void> {
   await waitForHook(page);
   await page.evaluate(([m, s]) => window.__game.debug.startGame(m as 'facile', s as number), [mode, seed] as const);
   await expect.poll(() => page.evaluate(() => window.__game.state)).toBe('playing');
+  // En rendu logiciel, le processus GPU peut encore digérer le chargement : on attend que
+  // le temps de jeu avance vraiment avant de continuer.
+  await expect.poll(() => page.evaluate(() => window.__game.debug.elapsed()), { timeout: 180_000 }).toBeGreaterThan(0.2);
 }
 
 /** Attend que le jeu ait rendu quelques images. */

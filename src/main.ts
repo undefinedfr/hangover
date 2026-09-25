@@ -121,7 +121,6 @@ async function boot(): Promise<void> {
 
   installHook(game, start);
   showMenu();
-  hideLoading();
   if (isMode(urlMode)) menu.select(urlMode);
 }
 

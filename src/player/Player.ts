@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { itemGeometry } from '../items/models';
 import { vertexColorMaterial } from '../world/materials';
+import { buildCharacter } from './CharacterModel';
 import { Physics, RAPIER, GROUP_PLAYER, GROUP_WORLD, GROUP_VEHICLE, groups } from '../core/Physics';
 
 export const WALK_SPEED = 4;
@@ -22,7 +23,7 @@ export class Player {
   private readonly controller: RAPIER.KinematicCharacterController;
 
   private readonly torso: THREE.Group;
-  private readonly head: THREE.Mesh;
+  private readonly head: THREE.Group;
   private readonly armL: THREE.Group;
   private readonly armR: THREE.Group;
   private readonly legL: THREE.Group;
@@ -47,65 +48,20 @@ export class Player {
 
   constructor(private readonly physics: Physics, swaySeed: number) {
     this.swaySeed = swaySeed;
-    const skin = new THREE.MeshStandardNodeMaterial({ color: 0xf2c29b, roughness: 0.8 });
-    const shirt = new THREE.MeshStandardNodeMaterial({ color: 0xff6f59, roughness: 0.85 });
-    const pants = new THREE.MeshStandardNodeMaterial({ color: 0x3b5b92, roughness: 0.9 });
-    const tie = new THREE.MeshStandardNodeMaterial({ color: 0x5dd39e, roughness: 0.6 });
-    const dark = new THREE.MeshStandardNodeMaterial({ color: 0x2b2b3a, roughness: 0.9 });
-
-    const cast = (m: THREE.Mesh) => {
-      m.castShadow = true;
-      return m;
-    };
-
-    this.torso = new THREE.Group();
-    this.torso.position.y = 0.95;
-    const chest = cast(new THREE.Mesh(new THREE.CapsuleGeometry(0.27, 0.35, 4, 8), shirt));
-    chest.position.y = 0.2;
-    this.torso.add(chest);
-    this.head = cast(new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 1), skin));
-    this.head.position.y = 0.72;
-    this.torso.add(this.head);
-    // Cravate nouée autour de la tête : souvenir de la soirée
-    const band = cast(new THREE.Mesh(new THREE.TorusGeometry(0.215, 0.035, 5, 14), tie));
-    band.rotation.x = Math.PI / 2;
-    band.position.y = 0.06;
-    this.head.add(band);
-    const knot = cast(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.09), tie));
-    knot.position.set(0, -0.02, -0.24);
-    knot.rotation.x = -0.5;
-    this.head.add(knot);
-    const eyeGeo = new THREE.SphereGeometry(0.03, 6, 4);
-    for (const sx of [-0.08, 0.08]) {
-      const eye = new THREE.Mesh(eyeGeo, dark);
-      eye.position.set(sx, 0.03, 0.2);
-      eye.scale.y = 0.45; // yeux mi-clos
-      this.head.add(eye);
-    }
+    const parts = buildCharacter();
+    this.torso = parts.torso;
+    this.head = parts.head;
+    this.armL = parts.armL;
+    this.armR = parts.armR;
+    this.legL = parts.legL;
+    this.legR = parts.legR;
+    this.object.add(this.torso, this.legL, this.legR);
 
     this.glasses = new THREE.Mesh(itemGeometry('lunettes'), vertexColorMaterial({ flat: false }));
-    this.glasses.scale.setScalar(0.85);
+    this.glasses.scale.setScalar(0.5);
     this.glasses.position.set(0, 0.03, 0.2);
     this.glasses.visible = false;
     this.head.add(this.glasses);
-
-    const limb = (len: number, r: number, mat: THREE.Material) => {
-      const g = new THREE.Group();
-      const m = cast(new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 3, 6), mat));
-      m.position.y = -len / 2 - r * 0.5;
-      g.add(m);
-      return g;
-    };
-    this.armL = limb(0.45, 0.075, shirt);
-    this.armL.position.set(-0.34, 0.42, 0);
-    this.armR = limb(0.45, 0.075, shirt);
-    this.armR.position.set(0.34, 0.42, 0);
-    this.torso.add(this.armL, this.armR);
-    this.legL = limb(0.55, 0.1, pants);
-    this.legL.position.set(-0.13, 0.74, 0);
-    this.legR = limb(0.55, 0.1, pants);
-    this.legR.position.set(0.13, 0.74, 0);
-    this.object.add(this.torso, this.legL, this.legR);
 
     const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, 5, 0);
     this.body = physics.world.createRigidBody(bodyDesc);

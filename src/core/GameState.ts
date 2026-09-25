@@ -1,5 +1,5 @@
 export type Mode = 'facile' | 'normal' | 'hardcore';
-export type State = 'menu' | 'playing' | 'paused' | 'won';
+export type State = 'loading' | 'menu' | 'playing' | 'paused' | 'won';
 export type ItemId = 'lunettes' | 'telephone' | 'portefeuille' | 'clesVoiture' | 'clesMaison';
 /** Tout ce qui peut apparaître dans l'inventaire (la voiture compte quand on l'a récupérée). */
 export type InventoryId = ItemId | 'voiture';

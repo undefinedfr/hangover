@@ -6,49 +6,20 @@ import {
   fract,
   hash,
   mix,
-  normalWorld,
   positionWorld,
-  select,
-  sign,
   step,
-  vec3,
   color,
+  fwidth,
+  max,
+  smoothstep,
+  mx_noise_float,
 } from 'three/tsl';
+import type { Node } from 'three/webgpu';
+import { isLite } from '../core/Quality';
 
-/** Façades : couleur par instance + fenêtres procédurales (TSL), sans texture. */
-export function buildingMaterial(): THREE.MeshStandardNodeMaterial {
-  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.85, metalness: 0 });
-  const wp = positionWorld;
-  const n = normalWorld;
-  const sideways = abs(n.x).greaterThan(0.5);
-  const horiz = select(sideways, wp.z, wp.x);
-  const colW = 2.6;
-  const rowH = 3.2;
-  const u = fract(horiz.div(colW));
-  const v = fract(wp.y.div(rowH));
-  const wall = float(1).sub(step(0.5, abs(n.y)));
-  const upper = step(rowH, wp.y);
-  const winUpper = step(0.28, u).mul(step(u, 0.72)).mul(step(0.3, v)).mul(step(v, 0.82));
-  // Rez-de-chaussée : grandes vitrines
-  const shopU = fract(horiz.div(5.2));
-  const winShop = step(0.12, shopU).mul(step(shopU, 0.88)).mul(step(0.25, wp.y)).mul(step(wp.y, 2.4));
-  const win = mix(winShop, winUpper, upper).mul(wall);
-  // Encadrement plus clair autour des fenêtres
-  const frame = step(0.22, u).mul(step(u, 0.78)).mul(step(0.24, v)).mul(step(v, 0.88)).mul(upper).mul(wall);
-
-  // Pas de coordonnée de profondeur dans le hash : sur une façade elle est constante et
-  // tombe parfois pile sur un entier (floor instable => grésillement).
-  const faceSign = sign(n.x.add(n.z)).mul(13.0).add(select(sideways, float(29.0), float(0.0)));
-  const cell = floor(horiz.div(colW)).add(floor(wp.y.div(rowH)).mul(57.0)).add(faceSign);
-  const lit = step(0.86, hash(cell));
-  const glass = mix(vec3(0.18, 0.22, 0.32), vec3(0.95, 0.8, 0.55), lit);
-
-  mat.colorNode = mix(mix(vec3(1, 1, 1), vec3(1.15, 1.12, 1.08), frame), glass, win);
-  // Reflets du soleil levant sur les vitres + quelques fenêtres encore allumées
-  const reflect = hash(cell.add(3.7)).mul(0.25).add(0.1);
-  mat.emissiveNode = win.mul(mix(color(0xffb38a).mul(reflect), vec3(0.9, 0.62, 0.3), lit));
-  mat.roughnessNode = mix(float(0.85), float(0.25), win);
-  return mat;
+/** Bruit procédural, neutralisé en qualité basse (très coûteux sans GPU). */
+function noise(p: Node<'vec3'>): Node<'float'> {
+  return isLite() ? float(0) : mx_noise_float(p);
 }
 
 export function vertexColorMaterial(opts: { roughness?: number; flat?: boolean } = {}): THREE.MeshStandardNodeMaterial {
@@ -61,4 +32,68 @@ export function vertexColorMaterial(opts: { roughness?: number; flat?: boolean }
 
 export function plainMaterial(hex: number, roughness = 0.9, flat = false): THREE.MeshStandardNodeMaterial {
   return new THREE.MeshStandardNodeMaterial({ color: hex, roughness, flatShading: flat });
+}
+
+/** Anti-crénelage des motifs : 1 de près, 0 quand le motif devient plus fin qu'un pixel. */
+function detail(coord: Node<'float'>, scale = 1): Node<'float'> {
+  return float(1).sub(smoothstep(0.25, 0.9, fwidth(coord).mul(scale)));
+}
+
+/** Trottoir en dalles de pierre décalées, joints et nuances par dalle. */
+export function pavingMaterial(): THREE.MeshStandardNodeMaterial {
+  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.92 });
+  const wp = positionWorld;
+  const row = floor(wp.z.div(0.62));
+  const u = wp.x.div(1.05).add(row.mul(0.5));
+  const cellX = floor(u);
+  const jx = abs(fract(u).sub(0.5));
+  const jz = abs(fract(wp.z.div(0.62)).sub(0.5));
+  const joint = smoothstep(0.47, 0.5, max(jx, jz)).mul(detail(wp.x, 1.2));
+  const tint = hash(cellX.add(row.mul(71.3))).sub(0.5).mul(0.07);
+  const base = color(0xd9d1c4).mul(tint.add(1)).mul(noise(wp.mul(0.25)).mul(0.04).add(1));
+  mat.colorNode = mix(base, base.mul(0.8), joint);
+  return mat;
+}
+
+/** Enrobé : grain fin, rapiéçages, légère usure. */
+export function asphaltMaterial(): THREE.MeshStandardNodeMaterial {
+  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.95 });
+  const wp = positionWorld;
+  const patches = smoothstep(0.35, 0.6, noise(wp.mul(0.045)).add(0.5));
+  const grain = noise(wp.mul(2.3)).mul(0.05).mul(detail(wp.x, 2));
+  const base = mix(color(0x4f505c), color(0x45464f), patches);
+  mat.colorNode = base.mul(grain.add(1)).mul(noise(wp.mul(0.2)).mul(0.05).add(1));
+  return mat;
+}
+
+/** Caniveau en pavés. */
+export function cobbleMaterial(): THREE.MeshStandardNodeMaterial {
+  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.9 });
+  const wp = positionWorld;
+  const cx = fract(wp.x.div(0.22));
+  const cz = fract(wp.z.div(0.22));
+  const j = smoothstep(0.38, 0.5, max(abs(cx.sub(0.5)), abs(cz.sub(0.5)))).mul(detail(wp.x, 5));
+  const tint = hash(floor(wp.x.div(0.22)).add(floor(wp.z.div(0.22)).mul(57))).sub(0.5).mul(0.12);
+  const base = color(0x8d8a86).mul(tint.add(1));
+  mat.colorNode = mix(base, base.mul(0.55), j);
+  return mat;
+}
+
+/** Allées de parc en gravier clair. */
+export function gravelMaterial(): THREE.MeshStandardNodeMaterial {
+  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1 });
+  const wp = positionWorld;
+  const speck = step(0.78, hash(floor(wp.x.mul(18)).add(floor(wp.z.mul(18)).mul(131)))).mul(detail(wp.x, 18));
+  mat.colorNode = mix(color(0xe3d3ae), color(0xb9a883), speck.mul(0.8)).mul(noise(wp.mul(0.3)).mul(0.05).add(1));
+  return mat;
+}
+
+/** Pelouse tondue en bandes. */
+export function lawnMaterial(): THREE.MeshStandardNodeMaterial {
+  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1 });
+  const wp = positionWorld;
+  const stripe = step(0.5, fract(wp.x.div(3)));
+  const n = noise(wp.mul(0.18)).mul(0.08);
+  mat.colorNode = mix(color(0x86bf5f), color(0x9acc6c), stripe).mul(n.add(1));
+  return mat;
 }

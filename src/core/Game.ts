@@ -14,6 +14,7 @@ import { HUD } from '../ui/HUD';
 import { Minimap, type MapMarker } from '../ui/Minimap';
 import { AudioManager } from '../audio/AudioManager';
 import { TouchControls, isTouchDevice } from '../ui/TouchControls';
+import { getQuality, type Quality } from './Quality';
 import { DrunkBlur } from '../fx/DrunkBlur';
 import type { Vehicle } from '../vehicles/Vehicle';
 import { Car } from '../vehicles/Car';
@@ -45,6 +46,9 @@ export class Game {
   readonly hud: HUD;
   readonly audio = new AudioManager();
   readonly touch: TouchControls | null = null;
+  quality: Quality = 'haute';
+  /** Drapeaux de diagnostic (?debug=noshadow,nopost). */
+  readonly debugFlags = new Set((new URLSearchParams(location.search).get('debug') ?? '').split(',').filter(Boolean));
   items: Item[] = [];
   inventory = new Inventory();
   elapsed = 0;
@@ -76,10 +80,11 @@ export class Game {
   constructor(readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
     const touch = isTouchDevice();
-    // Sur mobile, on limite la résolution pour garder un framerate correct
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, touch ? 1.5 : 2));
+    this.quality = getQuality();
+    // Sur mobile ou en qualité basse, on limite la résolution pour garder un framerate correct
+    this.renderer.setPixelRatio(this.quality === 'basse' ? 1 : Math.min(window.devicePixelRatio, touch ? 1.5 : 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = !new URLSearchParams(location.search).get('debug')?.includes('noshadow');
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -124,7 +129,15 @@ export class Game {
 
     this.scene = new THREE.Scene();
     this.physics = new Physics();
-    this.env = new Environment(this.scene);
+    this.env = new Environment(this.scene, this.quality === 'basse' ? 1024 : 2048);
+    if (this.quality === 'basse') {
+      // Vue plus courte : le brouillard masque la coupure, les tuiles lointaines sont écartées
+      this.scene.fog = new THREE.Fog(0xf2c6a8, 40, 170);
+      this.camera.far = 190;
+    } else {
+      this.camera.far = 1200;
+    }
+    this.camera.updateProjectionMatrix();
     this.city = generateCity(seed, cfg.blocks, this.physics);
     this.scene.add(this.city.root);
 
@@ -170,15 +183,48 @@ export class Game {
       strength: cfg.blurStrength,
       radius: cfg.blurRadius,
       sharpRadius: cfg.sharpRadius,
+      ao: this.quality === 'haute',
     });
 
     this.accumulator = 0;
-    this.state = opts.showcase ? 'menu' : 'playing';
     if (opts.showcase) {
       this.cam.distance = 16;
       this.cam.pitch = 0.42;
     }
     this.input.clearPressed();
+
+    // Pré-compilation de tous les shaders avant d'afficher : pas d'à-coups au premier regard
+    const token = ++this.loadToken;
+    this.state = 'loading';
+    this.setLoading(true);
+    this.cam.update(1, this.player.position);
+    this.camera.updateMatrixWorld();
+    const finish = () => {
+      if (token !== this.loadToken) return;
+      this.state = opts.showcase ? 'menu' : 'playing';
+      this.last = performance.now();
+      this.accumulator = 0;
+      this.setLoading(false);
+    };
+    // Puis un premier rendu hors écran de chargement : envoi des géométries au GPU
+    const warm = () => {
+      if (token !== this.loadToken) return;
+      try {
+        if (this.blur && !this.debugFlags.has('nopost')) this.blur.render();
+        else this.renderer.render(this.scene, this.camera);
+      } catch (e) {
+        console.warn(e);
+      }
+      finish();
+    };
+    this.renderer.compileAsync(this.scene, this.camera).then(warm, warm);
+  }
+
+  private loadToken = 0;
+
+  private setLoading(v: boolean): void {
+    const el = document.getElementById('loading');
+    if (el) el.hidden = !v;
   }
 
   pause(): void {
@@ -510,6 +556,7 @@ export class Game {
       this.fpsTime = 0;
     }
 
+    const tA = performance.now();
     if (this.state === 'playing') {
       this.accumulator += dt;
       let steps = 0;
@@ -520,10 +567,17 @@ export class Game {
       }
       if (steps === MAX_STEPS) this.accumulator = 0;
     }
+    if (this.state === 'loading') return;
+    const tB = performance.now();
     this.frameUpdate(dt);
+    const tC = performance.now();
 
-    if (this.blur) this.blur.render();
+    if (this.blur && !this.debugFlags.has('nopost')) this.blur.render();
     else this.renderer.render(this.scene, this.camera);
+    if (this.debugFlags.has('timing')) {
+      const tD = performance.now();
+      if (tD - tA > 500) console.log(`frame ${Math.round(tD - tA)}ms: fixed ${Math.round(tB - tA)} update ${Math.round(tC - tB)} render ${Math.round(tD - tC)}`);
+    }
   }
 
   private fixedUpdate(dt: number): void {

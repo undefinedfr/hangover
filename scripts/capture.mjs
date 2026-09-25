@@ -8,8 +8,8 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 async function open(width, height) {
   const page = await browser.newPage({ viewport: { width, height } });
   await page.goto(base);
-  await page.waitForFunction(() => window.__game && window.__game.state === 'menu');
-  await page.waitForTimeout(2500);
+  await page.waitForFunction(() => window.__game && window.__game.state === 'menu', null, { timeout: 180000 });
+  await page.waitForTimeout(8000);
   return page;
 }
 
@@ -22,8 +22,9 @@ await og.close();
 // Capture du README : en jeu, flou encore actif
 const shot = await open(1280, 720);
 await shot.evaluate(() => window.__game.debug.startGame('normal', 42));
-await shot.evaluate(() => window.__game.debug.camera(6, 0.28));
-await shot.waitForTimeout(3000);
+await shot.waitForFunction(() => window.__game.debug.elapsed() > 0.5, null, { timeout: 180000 });
+await shot.evaluate(() => window.__game.debug.camera(6, 0.22));
+await shot.waitForTimeout(4000);
 await shot.screenshot({ path: 'docs/screenshot.png' });
 await shot.evaluate(() => {
   window.__game.debug.teleportTo('lunettes');
@@ -31,8 +32,8 @@ await shot.evaluate(() => {
 });
 await shot.waitForTimeout(3000);
 await shot.evaluate(() => window.__game.debug.teleportTo('depart'));
-await shot.evaluate(() => window.__game.debug.camera(6, 0.28));
-await shot.waitForTimeout(2500);
+await shot.evaluate(() => window.__game.debug.camera(9, 0.12, 2.5));
+await shot.waitForTimeout(5000);
 await shot.screenshot({ path: 'docs/screenshot-net.png' });
 await browser.close();
 console.log('captures générées');

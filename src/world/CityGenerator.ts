@@ -2,14 +2,27 @@ import * as THREE from 'three/webgpu';
 import type { Physics } from '../core/Physics';
 import { RNG } from '../core/rng';
 import { InstanceBatch } from './Batch';
-import { buildingMaterial, plainMaterial, vertexColorMaterial } from './materials';
+import {
+  plainMaterial,
+  vertexColorMaterial,
+  pavingMaterial,
+  asphaltMaterial,
+  cobbleMaterial,
+  gravelMaterial,
+  lawnMaterial,
+} from './materials';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { facadeMaterial, GROUND_FLOOR, TOP_BAND, FLOOR_H } from './Facade';
+import { ArchitectureBuilder } from './Architecture';
 import {
   benchGeometry,
   binGeometry,
   bushGeometry,
   carGeometry,
-  gableGeometry,
-  hydrantGeometry,
+  wallaceGeometry,
+  bollardGeometry,
+  morrisGeometry,
+  treeGrateGeometry,
   lampGeometry,
   treeGeometry,
 } from './props';
@@ -70,8 +83,13 @@ export interface City {
   footprints: Rect[];
 }
 
-const PALETTE = [0xf4a9a8, 0xf7d08a, 0xa8d8b9, 0x9ec1e8, 0xc8a8e0, 0xf7b58a, 0xefe6cf, 0x8fd3d1, 0xf2c4de, 0xd6e89a];
-const CAR_PAINTS = [0xe8504a, 0x4a90d9, 0xf2c14e, 0x5dbb8a, 0xf2f2f2, 0x9b6fd1, 0xff8a5b, 0x2f3e5c];
+/** Pierre de taille haussmannienne. */
+const STONE = [0xeee2ca, 0xe9dbc0, 0xf3eadb, 0xe4d5ba, 0xece0cc, 0xe8dcc8];
+/** Façades enduites des faubourgs. */
+const PAINT = [0xf0c4a6, 0xf3d794, 0xbdd6c4, 0xc6d5e6, 0xefcdd0, 0xe9dfc9, 0xd9c3e0];
+/** Devantures et volets. */
+const ACCENT = [0x2f5d50, 0x7a2e3a, 0x28406b, 0x3a3d48, 0x9c6a2a, 0x557a95, 0x40634a];
+const CAR_PAINTS = [0xe3dccb, 0x9fb6c9, 0x46695a, 0xb8453e, 0x777c82, 0xd9a94a, 0x2d3646, 0xf1f0ea, 0x8e5b4a];
 
 interface Side {
   nx: number;
@@ -105,38 +123,65 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
   // --- Matériaux et lots d'instances ---
   const vmat = vertexColorMaterial();
   const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
-  const buildings = new InstanceBatch(unitBox, buildingMaterial());
-  const trims = new InstanceBatch(unitBox, plainMaterial(0xffffff, 0.9));
-  const slabs = new InstanceBatch(unitBox, plainMaterial(0xd9d0c6, 0.95), { castShadow: false });
-  const curbs = new InstanceBatch(unitBox, plainMaterial(0xb9aea3, 0.95), { castShadow: false });
-  const grass = new InstanceBatch(unitBox, plainMaterial(0x93cf73, 1), { castShadow: false });
-  const lots = new InstanceBatch(unitBox, plainMaterial(0x6d6c7c, 1), { castShadow: false });
+  // Géométrie propre aux façades (attributs d'instance dédiés)
+  const buildings = new InstanceBatch(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), plainMaterial(0xffffff));
+  const arch = new ArchitectureBuilder(rng.fork(0xa2c));
+  const archRng = rng.fork(0x51de);
+  const slabs = new InstanceBatch(unitBox, pavingMaterial(), { castShadow: false });
+  const curbs = new InstanceBatch(unitBox, plainMaterial(0xc6c3bc, 0.85), { castShadow: false });
+  const gutters = new InstanceBatch(unitBox, cobbleMaterial(), { castShadow: false });
+  const grass = new InstanceBatch(unitBox, lawnMaterial(), { castShadow: false });
+  const gravel = new InstanceBatch(unitBox, gravelMaterial(), { castShadow: false });
+  const lots = new InstanceBatch(unitBox, asphaltMaterial(), { castShadow: false });
   const stripes = new InstanceBatch(unitBox, plainMaterial(0xf6f1e7, 0.8), { castShadow: false });
   const benches = new InstanceBatch(benchGeometry(), vmat);
-  const bins = new InstanceBatch(binGeometry(), vmat);
+  const bins = new InstanceBatch(binGeometry(), vmat, { castShadow: false });
   const lamps = new InstanceBatch(lampGeometry(), vmat);
   const trees = new InstanceBatch(treeGeometry(), vmat);
   const bushes = new InstanceBatch(bushGeometry(), vmat);
-  const hydrants = new InstanceBatch(hydrantGeometry(), vmat);
+  const wallaces = new InstanceBatch(wallaceGeometry(), vmat);
+  const bollards = new InstanceBatch(bollardGeometry(), vmat, { castShadow: false });
+  const morris = new InstanceBatch(morrisGeometry(), vmat);
+  const grates = new InstanceBatch(treeGrateGeometry(), vmat, { castShadow: false });
+  const posters = new InstanceBatch(new THREE.CylinderGeometry(0.695, 0.695, 2.1, 20, 1, true), posterMaterial());
   const cars = new InstanceBatch(carGeometry(), vmat);
-  const roofs = new InstanceBatch(gableGeometry(), plainMaterial(0xffffff, 0.8, true));
-  const houseWalls = new InstanceBatch(unitBox, buildingMaterial());
-  const hedges = new InstanceBatch(unitBox, plainMaterial(0x5fae5a, 1));
+  const hedges = new InstanceBatch(
+    new RoundedBoxGeometry(1, 1, 1, 2, 0.18).translate(0, 0.5, 0),
+    plainMaterial(0x4d8443, 1),
+  );
 
   const spots: Spot[] = [];
   const parkedCars: Array<{ x: number; z: number }> = [];
   const footprints: Rect[] = [];
   const carpets: Rect[] = [];
 
-  const addBuilding = (cx: number, cz: number, w: number, d: number, h: number, colorHex: number) => {
-    buildings.add(cx, SLAB_H, cz, 0, w, h, d, colorHex);
-    trims.add(cx, SLAB_H + h, cz, 0, w + 0.3, 0.35, d + 0.3, new THREE.Color(colorHex).multiplyScalar(0.8));
-    physics.addBox(cx, SLAB_H + h / 2, cz, w / 2, h / 2, d / 2);
-    footprints.push({ minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - d / 2, maxZ: cz + d / 2 });
-    // Petits équipements de toit
-    if (w > 5 && d > 5 && rng.chance(0.7)) {
-      trims.add(cx + rng.range(-w / 4, w / 4), SLAB_H + h + 0.35, cz + rng.range(-d / 4, d / 4), 0, 1.6, 1.1, 1.2, 0xc9c4d4);
+  type Street = { px: boolean; nx: boolean; pz: boolean; nz: boolean };
+  /** Immeuble : haussmannien (style 0) ou faubourg (style 1). Renvoie sa hauteur. */
+  const addBuilding = (
+    cx: number,
+    cz: number,
+    w: number,
+    d: number,
+    style: 0 | 1,
+    street: Street,
+    opts: { floors?: number; wall?: number; accent?: number; decor?: boolean } = {},
+  ): number => {
+    const floors = opts.floors ?? (style === 0 ? archRng.int(4, 6) : archRng.int(1, 3));
+    const h = GROUND_FLOOR + floors * FLOOR_H + TOP_BAND;
+    const wall = new THREE.Color(opts.wall ?? archRng.pick(style === 0 ? STONE : PAINT));
+    const accent = new THREE.Color(opts.accent ?? archRng.pick(ACCENT));
+    buildings.add(cx, SLAB_H, cz, 0, w, h, d, 0xffffff, {
+      aSize: [w, h, d],
+      aWall: [wall.r, wall.g, wall.b],
+      aInfo: [style, archRng.next()],
+      aAccent: [accent.r, accent.g, accent.b],
+    });
+    arch.addBuilding({ x: cx, z: cz, w, d, h, style, street, base: SLAB_H }, wall.getHex());
+    if (!opts.decor) {
+      physics.addBox(cx, SLAB_H + h / 2, cz, w / 2, h / 2, d / 2);
+      footprints.push({ minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - d / 2, maxZ: cz + d / 2 });
     }
+    return h;
   };
 
   // --- Choix des blocs spéciaux ---
@@ -174,20 +219,19 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
   ground.position.y = -0.02;
   ground.receiveShadow = true;
   root.add(ground);
-  const asphalt = new THREE.Mesh(new THREE.PlaneGeometry(extent * 2, extent * 2), plainMaterial(0x5b5c6e, 0.95));
+  const asphalt = new THREE.Mesh(new THREE.PlaneGeometry(extent * 2, extent * 2), asphaltMaterial());
   asphalt.rotation.x = -Math.PI / 2;
   asphalt.position.y = 0;
   asphalt.receiveShadow = true;
   root.add(asphalt);
   physics.addBox(0, -0.5, 0, groundSize / 2, 0.5, groundSize / 2);
 
-  // Limites de la ville : haie + murs invisibles
+  // Limites de la ville : trottoir extérieur + murs invisibles (la ville a l'air de continuer)
   for (const s of SIDES) {
     const d = extent + 0.8;
     const len = extent * 2 + 3.2;
     const w = s.nx !== 0 ? 1.2 : len;
     const dd = s.nz !== 0 ? 1.2 : len;
-    hedges.add(s.nx * d, 0, s.nz * d, 0, w, 1.4, dd);
     physics.addBox(s.nx * d, 5, s.nz * d, w / 2, 5, dd / 2);
   }
 
@@ -251,8 +295,19 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
     physics.addCylinder(x, SLAB_H + 0.45, z, 0.45, 0.36);
     spots.push({ x, y: SLAB_H + 0.75, z, kind: 'nook', label: `dans une poubelle ${label}` });
   };
-  const addTree = (x: number, z: number, y = SLAB_H) => {
-    const s = rng.range(0.85, 1.25);
+  const addWallace = (x: number, z: number, y = SLAB_H) => {
+    wallaces.add(x, y, z, rng.range(0, Math.PI * 2));
+    physics.addCylinder(x, y + 1.3, z, 1.3, 0.45);
+  };
+  const addMorris = (x: number, z: number) => {
+    const r = rng.range(0, Math.PI * 2);
+    morris.add(x, SLAB_H, z, r);
+    posters.add(x, SLAB_H + 1.47, z, r);
+    physics.addCylinder(x, SLAB_H + 2, z, 2, 0.8);
+  };
+  const addTree = (x: number, z: number, y = SLAB_H, grate = false) => {
+    if (grate) grates.add(x, y, z);
+    const s = rng.range(0.9, 1.2);
     trees.add(x, y, z, rng.range(0, Math.PI * 2), s, s, s, new THREE.Color().setHSL(0, 0, rng.range(0.85, 1.05)));
     physics.addCylinder(x, y + 1.2, z, 1.2, 0.22 * s);
   };
@@ -260,7 +315,16 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
   for (const b of blocks) {
     // Dalle du trottoir
     slabs.add(b.x, 0, b.z, 0, HALF * 2, SLAB_H, HALF * 2);
-    curbs.add(b.x, 0, b.z, 0, HALF * 2 + 0.2, SLAB_H - 0.02, HALF * 2 + 0.2);
+    // Bordures en granit et caniveaux pavés
+    for (const s of SIDES) {
+      const along = s.nx === 0;
+      const cw = along ? HALF * 2 + 0.3 : 0.3;
+      const cd = along ? 0.3 : HALF * 2 + 0.3;
+      curbs.add(b.x + s.nx * (HALF - 0.1), 0, b.z + s.nz * (HALF - 0.1), 0, cw, SLAB_H + 0.012, cd);
+      const gw = along ? HALF * 2 + 0.9 : 0.45;
+      const gd = along ? 0.45 : HALF * 2 + 0.9;
+      gutters.add(b.x + s.nx * (HALF + 0.22), 0, b.z + s.nz * (HALF + 0.22), 0, gw, 0.006, gd);
+    }
     physics.addBox(b.x, SLAB_H / 2, b.z, HALF, SLAB_H / 2, HALF);
 
     switch (b.type) {
@@ -286,6 +350,8 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
   }
 
   function genBuildings(b: Block): void {
+    // Certains îlots sont plutôt « faubourg », la plupart haussmanniens
+    const faubourgRatio = archRng.chance(0.3) ? 0.75 : 0.15;
     type R = { x0: number; x1: number; z0: number; z1: number };
     const leaves: R[] = [];
     const split = (r: R, depth: number) => {
@@ -320,28 +386,22 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
       const w = r.x1 - r.x0;
       const d = r.z1 - r.z0;
       if (w < 3 || d < 3) continue;
-      const h = rng.range(7, 13) + (rng.chance(0.35) ? rng.range(6, 18) : 0);
-      addBuilding(b.x + (r.x0 + r.x1) / 2, b.z + (r.z0 + r.z1) / 2, w, d, h, rng.pick(PALETTE));
+      const e = 0.01;
+      const street = { px: r.x1 > INNER - e, nx: r.x0 < -INNER + e, pz: r.z1 > INNER - e, nz: r.z0 < -INNER + e };
+      addBuilding(b.x + (r.x0 + r.x1) / 2, b.z + (r.z0 + r.z1) / 2, w, d, archRng.chance(faubourgRatio) ? 1 : 0, street);
     }
   }
 
   function genPark(b: Block): void {
     const q = (INNER - 1.5) / 2 + 0.75;
+    gravel.add(b.x, SLAB_H, b.z, 0, INNER * 2, 0.015, INNER * 2);
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
         grass.add(b.x + sx * (q + 0.75), SLAB_H, b.z + sz * (q + 0.75), 0, INNER - 1.5, 0.04, INNER - 1.5);
       }
     }
-    // Fontaine centrale
-    const basin = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.6, 16), plainMaterial(0xcfc7bd));
-    basin.position.set(b.x, SLAB_H + 0.3, b.z);
-    basin.castShadow = basin.receiveShadow = true;
-    const water = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 0.05, 16), plainMaterial(0x7cc3e8, 0.2));
-    water.position.set(b.x, SLAB_H + 0.55, b.z);
-    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 1.6, 8), plainMaterial(0xcfc7bd));
-    spout.position.set(b.x, SLAB_H + 0.8, b.z);
-    spout.castShadow = true;
-    root.add(basin, water, spout);
+    // Fontaine centrale : vasque moulurée, deux coupes, eau
+    root.add(fountain(b.x, b.z));
     physics.addCylinder(b.x, SLAB_H + 0.3, b.z, 0.3, 2.4);
 
     // Arbres et buissons sur les pelouses
@@ -409,22 +469,20 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
         const c = at(b, s, d0, t);
         const w = 7.4;
         const depth = 7;
-        const h = rng.range(4.8, 6);
-        const wallColor = isArrival ? 0x7fb7e6 : rng.pick(PALETTE);
-        const roofColor = isArrival ? 0xe8504a : rng.pick([0xc0584f, 0x8f5a4a, 0x5e6e9e, 0x9a7b5a]);
         const along = s.nx !== 0; // façade perpendiculaire à x
         const sx = along ? depth : w;
         const sz = along ? w : depth;
         if (isArrival) {
+          const h = GROUND_FLOOR + FLOOR_H + TOP_BAND;
           const house = buildHouse(c.x, c.z, s.rot, w, depth, h);
           root.add(house.object);
           houseDoor = { x: house.door.x, y: SLAB_H, z: house.door.z, rotY: s.rot };
+          physics.addBox(c.x, SLAB_H + h / 2, c.z, sx / 2, h / 2, sz / 2);
+          footprints.push({ minX: c.x - sx / 2, maxX: c.x + sx / 2, minZ: c.z - sz / 2, maxZ: c.z + sz / 2 });
         } else {
-          houseWalls.add(c.x, SLAB_H, c.z, 0, sx, h, sz, wallColor);
-          roofs.add(c.x, SLAB_H + h, c.z, along ? Math.PI / 2 : 0, w + 0.6, 2.4, depth + 0.6, roofColor);
+          // Maisons de ville des faubourgs
+          addBuilding(c.x, c.z, sx, sz, 1, { px: false, nx: false, pz: false, nz: false }, { floors: archRng.int(1, 2) });
         }
-        physics.addBox(c.x, SLAB_H + h / 2, c.z, sx / 2, h / 2, sz / 2);
-        footprints.push({ minX: c.x - sx / 2, maxX: c.x + sx / 2, minZ: c.z - sz / 2, maxZ: c.z + sz / 2 });
         // Haie du jardin de devant, avec un passage vers la porte
         for (const hs of [-1, 1]) {
           const hc = at(b, s, INNER - 0.4, t + hs * 2.4);
@@ -451,8 +509,9 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
   function genCinema(b: Block): void {
     cinemaSide = rng.int(0, 3);
     const s = SIDES[cinemaSide];
-    const color = 0xb56ad6;
-    const h = 11;
+    const wall = 0xf1e4cf;
+    const accent = 0x8a1f2c;
+    const none = { px: false, nx: false, pz: false, nz: false };
     // Hall ouvert (moquette) : 9 m de large, 7 m de profondeur, plafond à 4 m
     const lobbyW = 9;
     const lobbyD = 7;
@@ -462,14 +521,14 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
       return { x: c.x, z: c.z, sx: along ? sd : st, sz: along ? st : sd };
     };
     const back = toWorld((-INNER + (INNER - lobbyD)) / 2, 0, INNER * 2 - lobbyD, INNER * 2);
-    addBuilding(back.x, back.z, back.sx, back.sz, h, color);
+    const h = addBuilding(back.x, back.z, back.sx, back.sz, 0, none, { floors: 2, wall, accent });
     const wingW = (INNER * 2 - lobbyW) / 2;
     for (const side of [-1, 1]) {
       const wing = toWorld(INNER - lobbyD / 2, side * (lobbyW / 2 + wingW / 2), lobbyD, wingW);
-      addBuilding(wing.x, wing.z, wing.sx, wing.sz, h, color);
+      addBuilding(wing.x, wing.z, wing.sx, wing.sz, 0, none, { floors: 2, wall, accent });
     }
     const top = toWorld(INNER - lobbyD / 2, 0, lobbyD, lobbyW);
-    buildings.add(top.x, SLAB_H + 4, top.z, 0, top.sx, h - 4, top.sz, color);
+    arch.addBox(top.x, SLAB_H + 4 + (h - 4) / 2, top.z, top.sx, h - 4, top.sz, wall);
     physics.addBox(top.x, SLAB_H + 4 + (h - 4) / 2, top.z, top.sx / 2, (h - 4) / 2, top.sz / 2);
 
     // Moquette : hall + trottoir devant
@@ -504,6 +563,12 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
   }
 
   function genSidewalk(b: Block): void {
+    // Une colonne Morris à un coin d'îlot sur trois environ
+    if (rng.chance(0.35)) {
+      const cx = rng.chance(0.5) ? 1 : -1;
+      const cz = rng.chance(0.5) ? 1 : -1;
+      addMorris(b.x + cx * 16.4, b.z + cz * 16.4);
+    }
     SIDES.forEach((s, si) => {
       // Lampadaires réguliers
       for (const t of [-12, 0, 12]) {
@@ -523,12 +588,18 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
         if (r < 0.35) addBench(p.x, p.z, s.rot, 'au bord de la rue');
         else if (r < 0.6) addBin(p.x, p.z, 'du trottoir');
         else if (r < 0.85 && b.type !== 'cinema') {
-          addTree(p.x, p.z);
+          addTree(p.x, p.z, SLAB_H, true);
           const bp = at(b, s, PROP_LINE - 0.7, t + 0.3);
           spots.push({ x: bp.x, y: SLAB_H, z: bp.z, kind: 'behind', label: 'derrière un arbre' });
         } else {
-          hydrants.add(p.x, SLAB_H, p.z, rng.range(0, 6));
-          physics.addCylinder(p.x, SLAB_H + 0.35, p.z, 0.35, 0.2);
+          addWallace(p.x, p.z);
+        }
+      }
+      // Potelets de part et d'autre des passages piétons
+      for (const sign of [-1, 1]) {
+        for (const t of [14.4, 17.3]) {
+          const p = at(b, s, HALF - 0.35, sign * t);
+          bollards.add(p.x, SLAB_H, p.z);
         }
       }
       // Emplacements « en évidence » sur le trottoir
@@ -582,18 +653,37 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
   const sc = at(startBlock, scooterSide, WALK_LINE - 0.3, rng.range(-6, 6));
   const scooterSpawn: Placement = { x: sc.x, y: SLAB_H, z: sc.z, rotY: scooterSide.rot + Math.PI / 2 };
 
-  // --- Horizon : silhouettes lointaines (sans collision) ---
-  const far = new InstanceBatch(unitBox, plainMaterial(0xe0b8b0, 1), { castShadow: false, receiveShadow: false });
-  for (let k = 0; k < 90; k++) {
-    const a = (k / 90) * Math.PI * 2 + rng.range(-0.02, 0.02);
-    const r = extent + rng.range(40, 110);
-    far.add(Math.cos(a) * r, 0, Math.sin(a) * r, a, rng.range(8, 20), rng.range(10, 45), rng.range(8, 20));
+  // --- Au-delà de la dernière rue : une rangée continue d'immeubles (décor, sans collision) ---
+  const OUT = extent + 4; // trottoir extérieur de 4 m
+  for (const s of SIDES) {
+    const along = s.nz !== 0;
+    // Les rangées nord/sud couvrent les angles, les rangées est/ouest s'arrêtent avant
+    const len = along ? (OUT + 13) * 2 : OUT * 2;
+    const slabLen = along ? len : extent * 2;
+    slabs.add(s.nx * (extent + 2), 0, s.nz * (extent + 2), 0, along ? slabLen : 4, SLAB_H, along ? 4 : slabLen);
+    curbs.add(s.nx * (extent + 0.15), 0, s.nz * (extent + 0.15), 0, along ? slabLen : 0.3, SLAB_H + 0.012, along ? 0.3 : slabLen);
+    let t = -len / 2;
+    while (t < len / 2) {
+      const wdt = Math.min(len / 2 - t, archRng.range(9, 16));
+      if (wdt < 4) break;
+      const depth = 13;
+      const cx = s.nx * (OUT + depth / 2) + (along ? t + wdt / 2 : 0);
+      const cz = s.nz * (OUT + depth / 2) + (along ? 0 : t + wdt / 2);
+      const street = { px: s.nx < 0, nx: s.nx > 0, pz: s.nz < 0, nz: s.nz > 0 };
+      addBuilding(cx, cz, along ? wdt : depth, along ? depth : wdt, archRng.chance(0.25) ? 1 : 0, street, {
+        decor: true,
+      });
+      t += wdt;
+    }
   }
 
-  for (const batch of [buildings, trims, slabs, curbs, grass, lots, stripes, benches, bins, lamps, trees, bushes, hydrants, cars, roofs, houseWalls, hedges, far]) {
+  for (const batch of [slabs, curbs, gutters, gravel, grass, lots, stripes, benches, bins, lamps, trees, bushes, wallaces, bollards, morris, grates, posters, cars, hedges]) {
     const mesh = batch.build();
     if (mesh) root.add(mesh);
   }
+  const facades = buildings.build(facadeMaterial());
+  if (facades) root.add(facades);
+  for (const o of arch.build()) root.add(o);
 
   return {
     n,
@@ -609,6 +699,99 @@ export function generateCity(seed: number, n: number, physics: Physics): City {
     carpets,
     footprints,
   };
+}
+
+function fountain(x: number, z: number): THREE.Group {
+  const g = new THREE.Group();
+  const stone = new THREE.MeshStandardNodeMaterial({ color: 0xd8cfbf, roughness: 0.85 });
+  const lathe = (pts: Array<[number, number]>, seg = 28) =>
+    new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+  const basin = new THREE.Mesh(
+    lathe([
+      [2.0, 0],
+      [2.45, 0.02],
+      [2.5, 0.12],
+      [2.4, 0.45],
+      [2.55, 0.55],
+      [2.55, 0.65],
+      [2.3, 0.66],
+      [2.25, 0.3],
+    ]),
+    stone,
+  );
+  const column = new THREE.Mesh(
+    lathe([
+      [0.001, 0],
+      [0.45, 0],
+      [0.35, 0.3],
+      [0.22, 0.6],
+      [0.2, 1.3],
+      [0.3, 1.4],
+      [1.05, 1.5],
+      [1.1, 1.62],
+      [0.95, 1.64],
+      [0.25, 1.62],
+      [0.16, 1.9],
+      [0.14, 2.3],
+      [0.22, 2.35],
+      [0.6, 2.45],
+      [0.62, 2.55],
+      [0.5, 2.56],
+      [0.12, 2.6],
+      [0.1, 2.9],
+      [0.16, 2.98],
+      [0.001, 3.08],
+    ]),
+    stone,
+  );
+  const waterMat = new THREE.MeshStandardNodeMaterial({ color: 0x7ab8d4, roughness: 0.08, metalness: 0.1 });
+  const water = new THREE.Mesh(new THREE.CircleGeometry(2.28, 32), waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = 0.52;
+  const water2 = new THREE.Mesh(new THREE.CircleGeometry(0.98, 20), waterMat);
+  water2.rotation.x = -Math.PI / 2;
+  water2.position.y = 1.6;
+  for (const m of [basin, column]) {
+    m.castShadow = true;
+    m.receiveShadow = true;
+  }
+  g.add(basin, column, water, water2);
+  g.position.set(x, SLAB_H, z);
+  return g;
+}
+
+/** Affiches colorées de la colonne Morris (texture générée). */
+function posterMaterial(): THREE.MeshStandardNodeMaterial {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 256;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#e9e1cf';
+  ctx.fillRect(0, 0, 1024, 256);
+  const colors = ['#e8504a', '#2d4a7a', '#f2c14e', '#2f6b57', '#b56ad6', '#ff8a5b', '#26303f'];
+  const words = ['CONCERT', 'THÉÂTRE', 'EXPO', 'CIRQUE', 'OPÉRA', 'CINÉ', 'BAL', 'JAZZ'];
+  let x = 6;
+  let i = 0;
+  while (x < 1018) {
+    const w = 110 + ((i * 53) % 70);
+    const col = colors[i % colors.length];
+    ctx.fillStyle = col;
+    ctx.fillRect(x, 10 + (i % 3) * 6, w - 8, 230 - (i % 3) * 10);
+    ctx.fillStyle = i % 2 ? '#fff7ee' : '#26303f';
+    ctx.font = 'bold 26px Trebuchet MS, sans-serif';
+    ctx.save();
+    ctx.translate(x + (w - 8) / 2, 70);
+    ctx.textAlign = 'center';
+    ctx.fillText(words[i % words.length], 0, 0);
+    ctx.fillRect(-30, 30, 60, 60);
+    ctx.restore();
+    x += w;
+    i++;
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return new THREE.MeshStandardNodeMaterial({ map: tex, roughness: 0.85 });
 }
 
 function makeSign(text: string, fg: string, bg: string): THREE.Mesh {

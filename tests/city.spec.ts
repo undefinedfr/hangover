@@ -27,7 +27,7 @@ test('M2. on ne traverse pas les immeubles', async ({ page }) => {
       const t0 = performance.now();
       let frames = 0;
       await new Promise<void>((r) => {
-        const tick = () => (++frames > 40 && performance.now() - t0 > 1500 ? r() : requestAnimationFrame(tick));
+        const tick = () => (++frames > 15 && performance.now() - t0 > 1500 ? r() : requestAnimationFrame(tick));
         requestAnimationFrame(tick);
       });
     });

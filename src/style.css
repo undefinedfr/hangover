@@ -689,3 +689,17 @@ kbd {
 .is-touch .touch-hint {
   display: block;
 }
+
+.quality-toggle {
+  display: block;
+  margin: 14px auto 0;
+  padding: 6px 14px;
+  border: 2px solid rgba(45, 38, 64, 0.15);
+  border-radius: 999px;
+  background: transparent;
+  color: #5a5270;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

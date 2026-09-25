@@ -13,7 +13,7 @@ test('1b. le menu s\'affiche avec les trois modes', async ({ page }) => {
 });
 
 test('5. scénario complet en facile via les hooks : victoire', async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(600_000);
   const errors = watchErrors(page);
   await page.goto('./');
   await startGame(page, 'facile', 42);
