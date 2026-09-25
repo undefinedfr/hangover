@@ -11,6 +11,7 @@ import { Item } from '../items/Item';
 import { spawnItems, pickupMessage } from '../items/ItemSpawner';
 import { Inventory } from '../items/Inventory';
 import { HUD } from '../ui/HUD';
+import { Minimap, type MapMarker } from '../ui/Minimap';
 import { DrunkBlur } from '../fx/DrunkBlur';
 import type { Vehicle } from '../vehicles/Vehicle';
 import { Car } from '../vehicles/Car';
@@ -47,6 +48,12 @@ export class Game {
   car: Car | null = null;
   driving: Vehicle | null = null;
   private lookIdle = 0;
+  minimap: Minimap | null = null;
+  minimapOn = false;
+  arrivedByCar = false;
+  onWin: ((time: number) => void) | null = null;
+  onPauseChange: ((paused: boolean) => void) | null = null;
+  onToggleMute: (() => void) | null = null;
 
   state: State = 'menu';
   mode: Mode = 'facile';
@@ -91,7 +98,7 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
   }
 
-  startGame(mode: Mode, seed: number): void {
+  startGame(mode: Mode, seed: number, opts: { showcase?: boolean } = {}): void {
     this.teardown();
     this.mode = mode;
     this.seed = seed;
@@ -130,10 +137,15 @@ export class Game {
     const slots: InventoryId[] = [...cfg.items, 'voiture'];
     this.hud.setup(slots);
     this.hud.updateInventory([]);
-    this.hud.show(true);
+    this.hud.show(!opts.showcase);
     this.elapsed = 0;
+    this.arrivedByCar = false;
     this.lastMessage = '';
-    this.message('Tu te réveilles sur un banc. Aïe. Où sont passées tes affaires ?', 6);
+    this.minimap = new Minimap(this.hud.minimap, this.city);
+    // En facile, le téléphone est déjà dans ta poche : mini-carte dès le départ
+    this.minimapOn = cfg.minimap === 'items';
+    this.hud.showMinimap(this.minimapOn);
+    if (!opts.showcase) this.message('Tu te réveilles sur un banc. Aïe. Où sont passées tes affaires ?', 6);
 
     this.blur = new DrunkBlur(this.renderer, this.scene, this.camera, {
       strength: cfg.blurStrength,
@@ -141,8 +153,36 @@ export class Game {
     });
 
     this.accumulator = 0;
-    this.state = 'playing';
+    this.state = opts.showcase ? 'menu' : 'playing';
+    if (opts.showcase) {
+      this.cam.distance = 16;
+      this.cam.pitch = 0.42;
+    }
     this.input.clearPressed();
+  }
+
+  pause(): void {
+    if (this.state !== 'playing') return;
+    this.state = 'paused';
+    this.input.exitPointerLock();
+    this.hud.showPanel(false);
+    this.onPauseChange?.(true);
+  }
+
+  resume(): void {
+    if (this.state !== 'paused') return;
+    this.state = 'playing';
+    this.last = performance.now();
+    this.input.clearPressed();
+    this.onPauseChange?.(false);
+  }
+
+  private win(): void {
+    this.state = 'won';
+    this.hud.setPrompt('');
+    this.hud.showPanel(false);
+    this.input.exitPointerLock();
+    this.onWin?.(this.elapsed);
   }
 
   private teardown(): void {
@@ -169,6 +209,12 @@ export class Game {
   }
 
   private onKey(code: string, e: KeyboardEvent): void {
+    if (code === 'Escape') {
+      if (this.state === 'playing') this.pause();
+      else if (this.state === 'paused') this.resume();
+      return;
+    }
+    if (code === 'KeyM' && this.state !== 'menu') this.onToggleMute?.();
     if (this.state !== 'playing') return;
     if (code === 'Tab') {
       e.preventDefault();
@@ -187,6 +233,12 @@ export class Game {
     }
     let best: Interaction | null = null;
     let bestD = INTERACT_RADIUS;
+    const door = this.city!.house.door;
+    const dd = Math.hypot(door.x - p.x, door.z - p.z);
+    if (dd < 2.4) {
+      bestD = dd - 0.5;
+      best = { prompt: 'E Ouvrir la porte', run: () => this.tryOpenDoor() };
+    }
     for (const v of this.vehicles) {
       const d = Math.hypot(v.position.x - p.x, v.position.z - p.z) - v.spec.half[2];
       if (d < bestD + 0.4) {
@@ -203,6 +255,24 @@ export class Game {
       }
     }
     return best;
+  }
+
+  /** Condition de victoire : objets requis + arrivée en voiture, puis ouvrir la porte. */
+  private tryOpenDoor(): void {
+    const cfg = MODES[this.mode];
+    const inv = this.inventory;
+    if (!inv.has('clesMaison')) {
+      this.message('Fermé à clé. Tes clés de maison traînent quelque part en ville.', 4);
+    } else if (!inv.has('lunettes')) {
+      this.message('Impossible de viser la serrure sans tes lunettes. Tu vois trois trous.', 4);
+    } else if (cfg.walletRequired && !inv.has('portefeuille')) {
+      this.message('Et ton portefeuille ? Demain, sans papiers, ce sera pire.', 4);
+    } else if (!inv.has('clesVoiture') || !this.arrivedByCar) {
+      this.message("Et la voiture ? Tu ne vas pas la laisser là-bas. Va la chercher et gare-toi devant.", 4.5);
+    } else {
+      this.message('Clic. La porte s\'ouvre. Ton lit est là, rien que pour toi.', 5);
+      this.win();
+    }
   }
 
   private vehiclePrompt(v: Vehicle): string {
@@ -281,6 +351,15 @@ export class Game {
       this.blur?.clear();
       this.player?.wearGlasses();
     }
+    if (id === 'telephone') {
+      if (cfg.minimap === 'none') {
+        setTimeout(() => this.state === 'playing' && this.message('Écran fissuré, 1 % de batterie. Pas de carte pour toi.', 4), 4600);
+      } else {
+        this.minimapOn = true;
+        this.hud.showMinimap(true);
+        setTimeout(() => this.state === 'playing' && this.message('Le GPS indique ta voiture et ta maison. Merci la technologie.', 4), 4600);
+      }
+    }
     // « Tu reprends tes esprits » : le titubement diminue
     const recovered = cfg.walletRequired
       ? this.inventory.has('telephone') && this.inventory.has('portefeuille')
@@ -357,6 +436,17 @@ export class Game {
     this.player.teleport(p.x, p.y + 0.05, p.z);
     this.cam?.snap();
     return true;
+  }
+
+  private mapMarkers(): MapMarker[] {
+    const cfg = MODES[this.mode];
+    const c = this.city!;
+    const out: MapMarker[] = [{ x: c.house.door.x, z: c.house.door.z, kind: 'house' }];
+    if (this.car && this.driving !== this.car) out.push({ x: this.car.position.x, z: this.car.position.z, kind: 'car' });
+    if (cfg.minimap === 'items') {
+      for (const it of this.items) if (!it.collected) out.push({ x: it.position.x, z: it.position.z, kind: 'item' });
+    }
+    return out;
   }
 
   isOnCarpet(p: THREE.Vector3): boolean {
@@ -438,6 +528,14 @@ export class Game {
     this.physics!.step();
     this.elapsed += dt;
 
+    if (v && v === this.car && !this.arrivedByCar) {
+      const f = this.city!.house.front;
+      if (Math.hypot(v.position.x - f.x, v.position.z - f.z) < 14) {
+        this.arrivedByCar = true;
+        this.message('Te voilà devant chez toi ! Descends et ouvre la porte (E).', 5);
+      }
+    }
+
     const interaction = this.findInteraction();
     this.currentPrompt = interaction?.prompt ?? '';
     if (this.input.consume('KeyE') && interaction) interaction.run();
@@ -457,8 +555,15 @@ export class Game {
         this.cam.yaw += d * Math.min(1, dt * 2.5);
       }
     }
+    if (this.state === 'menu') {
+      // Écran d'accueil : lente orbite autour du banc
+      this.cam.yaw += dt * 0.12;
+    }
     for (const v of this.vehicles) v.animate(dt);
     this.player.animate(dt);
+    if (this.minimapOn && this.minimap && this.state === 'playing') {
+      this.minimap.draw(dt, this.player.position.x, this.player.position.z, this.player.facing, this.mapMarkers());
+    }
     for (const it of this.items) it.update(dt, this.camera, this.player.position);
     this.hud.setPrompt(this.state === 'playing' ? this.currentPrompt : '');
     this.hud.setTime(this.elapsed);

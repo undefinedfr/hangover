@@ -273,3 +273,254 @@ kbd {
   color: var(--muted);
   text-align: center;
 }
+
+/* ---------- Écrans (menu, pause, fin) ---------- */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at center, rgba(45, 38, 64, 0.15), rgba(45, 38, 64, 0.55));
+}
+
+.screen[hidden] {
+  display: none;
+}
+
+.menu-card {
+  width: min(760px, 100%);
+  padding: 28px 32px;
+  border-radius: 28px;
+  background: rgba(255, 247, 238, 0.95);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.menu-card.small {
+  width: min(420px, 100%);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(40px, 8vw, 76px);
+  line-height: 1;
+  letter-spacing: -1px;
+  color: var(--accent);
+  text-shadow: 3px 3px 0 #ffd24a, 6px 6px 0 rgba(45, 38, 64, 0.15);
+  transform: rotate(-2deg);
+  animation: wobble 4s ease-in-out infinite;
+}
+
+.title span {
+  color: var(--ink);
+  font-size: 0.6em;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50% { transform: rotate(1.5deg) translateY(-3px); }
+}
+
+.tagline {
+  max-width: 520px;
+  margin: 16px auto 20px;
+  font-size: 17px;
+  color: #5a5270;
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 12px;
+  border: 3px solid transparent;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(45, 38, 64, 0.12);
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.mode:hover {
+  transform: translateY(-2px);
+}
+
+.mode.selected {
+  border-color: var(--accent);
+}
+
+.mode b {
+  font-size: 20px;
+}
+
+.mode .dur {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.mode .blurb {
+  font-size: 13px;
+  color: #5a5270;
+}
+
+.mode .best {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.btn {
+  padding: 12px 26px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(45, 38, 64, 0.2);
+  transition: transform 0.1s;
+}
+
+.btn:active {
+  transform: translateY(2px);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 0 #c94a39;
+}
+
+.btn.ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.play {
+  font-size: 22px;
+  padding: 14px 56px;
+}
+
+.controls {
+  margin-top: 18px;
+  text-align: left;
+  font-size: 14px;
+  color: #5a5270;
+}
+
+.controls summary {
+  cursor: pointer;
+  font-weight: 700;
+  text-align: center;
+}
+
+.controls ul {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.controls kbd {
+  margin-right: 2px;
+}
+
+.end h2,
+.pause h2 {
+  margin: 0;
+  font-size: 40px;
+  color: var(--accent);
+}
+
+.end-sub {
+  margin: 8px 0 18px;
+  color: #5a5270;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.stats div {
+  padding: 10px;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.stats dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stats dd {
+  margin: 2px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.record {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ffd24a;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.end-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.end-buttons.column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+@media (max-width: 640px) {
+  .modes {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-card {
+    padding: 20px 16px;
+  }
+
+  .hud-minimap {
+    width: 140px;
+    height: 140px;
+  }
+
+  .hud-item {
+    width: 34px;
+    height: 34px;
+    padding: 4px;
+  }
+
+  .hud-timer {
+    font-size: 20px;
+  }
+}

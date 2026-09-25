@@ -1,6 +1,8 @@
 import type { Game } from '../core/Game';
 import type { Mode } from '../core/GameState';
 
+type P = { x: number; z: number };
+
 export interface GameHook {
   readonly state: string;
   readonly mode: Mode;
@@ -18,6 +20,8 @@ export interface GameHook {
     interact(): void;
     camera(distance: number, pitch: number, yaw?: number): void;
     teleportXYZ(x: number, y: number, z: number): void;
+    elapsed(): number;
+    layout(): { start: P; house: P; car: P; items: Array<P & { id: string }> };
     footprints(): Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
   };
 }
@@ -66,6 +70,16 @@ export function installHook(game: Game, start: (mode: Mode, seed: number) => voi
       startGame: (mode, seed) => start(mode, seed),
       teleportTo: (name) => game.debugTeleport(name),
       interact: () => game.input.press('KeyE'),
+      elapsed: () => game.elapsed,
+      layout: () => {
+        const c = game.city!;
+        return {
+          start: { x: c.start.x, z: c.start.z },
+          house: { x: c.house.door.x, z: c.house.door.z },
+          car: { x: c.carSpawn.x, z: c.carSpawn.z },
+          items: game.items.map((it) => ({ id: it.id, x: it.position.x, z: it.position.z })),
+        };
+      },
       teleportXYZ: (x, y, z) => {
         game.player?.teleport(x, y, z);
         game.cam?.snap();

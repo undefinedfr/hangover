@@ -32,3 +32,9 @@ Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de de
 - Voiture verrouillée (« C'est fermé. Évidemment. »), puis conduite arcade avec les clés (accélérer, freiner, marche arrière, frein à main Espace, collisions avec les immeubles et les voitures garées).
 - Trottinette (2× la marche) et tricycle (pédalage animé, détection du sol moquette pour le son en M7).
 - Montée / descente avec E, sans rester coincé (tests).
+
+## M6 — Boucle de jeu complète ✅
+- Menu d'accueil (titre, 3 modes avec records, rappel des contrôles, bouton Jouer) sur fond de ville animée.
+- Chrono, pause (Échap / bouton), condition de victoire (objets + arrivée en voiture + porte), écran de fin (temps, mode, seed, record, Rejouer / Même ville / Menu), meilleurs temps en localStorage.
+- Mini-carte du téléphone selon le mode.
+- Test 5 vert (scénario complet facile), tests pause et mini-carte.

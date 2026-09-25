@@ -33,3 +33,10 @@
 - En véhicule, la caméra se replace derrière après 0,8 s sans mouvement de souris.
 - Le tricycle démarre dans le hall moquetté du cinéma (clin d'œil, sans référence visuelle directe).
 - La voiture du joueur est turquoise avec un cône de chantier sur le toit, pour qu'on la reconnaisse.
+- Facile ne contient pas de téléphone parmi les objets : on considère qu'il est déjà dans ta poche, la mini-carte (objets restants + voiture + maison) est donc active dès le départ. Normal : mini-carte voiture + maison après le téléphone. Hardcore : le téléphone ne sert à rien (écran fissuré, 1 %).
+- Mini-carte orientée nord (z vers le bas), carte de la ville pré-rendue dans un canvas hors écran, rayon 55 m, marqueurs rabattus sur le bord quand ils sont loin.
+- Victoire : il faut les objets requis, être arrivé en voiture à moins de 14 m devant la maison (drapeau conservé ensuite), puis ouvrir la porte avec E. Chaque manque a son message.
+- Menu : la ville de démonstration (facile, seed 20240 ou celle de l'URL) tourne en fond, floutée. `?seed=` et `?mode=` pré-remplissent la première partie ; l'URL est mise à jour à chaque partie.
+- Pause : Échap (ou perte du pointer lock, ou bouton ❚❚). Le chrono compte le temps de jeu (pas fixe), donc il s'arrête en pause.
+- Meilleurs temps par mode dans `localStorage` (clé `gueule-de-bois.best.v1`), lecture et écriture protégées par try/catch.
+- Durées estimées (chemin optimal connu, 5 seeds) : facile ≈ 400 m à pied + 150 m en voiture ; normal ≈ 1 km + 400 m ; hardcore ≈ 1,6 km + 500 m, à multiplier par la recherche.
