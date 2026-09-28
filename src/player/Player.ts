@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { itemGeometry } from '../items/models';
 import { vertexColorMaterial } from '../world/materials';
-import { buildCharacter } from './CharacterModel';
+import { createHero, REST_POSE, type Hero, type HeroPose } from './HeroModel';
 import { Physics, RAPIER, GROUP_PLAYER, GROUP_WORLD, GROUP_VEHICLE, groups } from '../core/Physics';
 
 export const WALK_SPEED = 4;
@@ -15,19 +15,15 @@ export const PLAYER_CENTER = HALF_HEIGHT + RADIUS;
 
 type Pose = 'walk' | 'ride' | 'pedal' | 'hidden';
 
-/** Personnage : capsule Rapier + silhouette low poly animée procéduralement. */
+/** Personnage : capsule Rapier + héros MakeHuman (squelette) animé procéduralement. */
 export class Player {
   readonly object = new THREE.Group();
   readonly body: RAPIER.RigidBody;
   readonly collider: RAPIER.Collider;
   private readonly controller: RAPIER.KinematicCharacterController;
 
-  private readonly torso: THREE.Group;
-  private readonly head: THREE.Group;
-  private readonly armL: THREE.Group;
-  private readonly armR: THREE.Group;
-  private readonly legL: THREE.Group;
-  private readonly legR: THREE.Group;
+  private readonly hero: Hero;
+  private readonly pose3: HeroPose = { ...REST_POSE };
   private readonly glasses: THREE.Mesh;
 
   readonly position = new THREE.Vector3();
@@ -48,20 +44,14 @@ export class Player {
 
   constructor(private readonly physics: Physics, swaySeed: number) {
     this.swaySeed = swaySeed;
-    const parts = buildCharacter();
-    this.torso = parts.torso;
-    this.head = parts.head;
-    this.armL = parts.armL;
-    this.armR = parts.armR;
-    this.legL = parts.legL;
-    this.legR = parts.legR;
-    this.object.add(this.torso, this.legL, this.legR);
+    this.hero = createHero();
+    this.object.add(this.hero.root);
 
+    // Lunettes posées sur le nez (écart des yeux ≈ 6,4 cm)
     this.glasses = new THREE.Mesh(itemGeometry('lunettes'), vertexColorMaterial({ flat: false }));
-    this.glasses.scale.setScalar(0.5);
-    this.glasses.position.set(0, 0.03, 0.2);
+    this.glasses.scale.setScalar(0.28);
     this.glasses.visible = false;
-    this.head.add(this.glasses);
+    this.hero.glassesAnchor.add(this.glasses);
 
     const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, 5, 0);
     this.body = physics.world.createRigidBody(bodyDesc);
@@ -158,50 +148,80 @@ export class Player {
     }
     this.object.visible = true;
 
+    const p = this.pose3;
+    Object.assign(p, REST_POSE);
     if (this.pose === 'walk') {
       const moving = Math.min(1, this.speed / WALK_SPEED);
       const prev = this.phase;
       this.phase += dt * (4 + this.speed * 1.6) * (moving > 0.05 ? 1 : 0);
       if (Math.floor(prev / Math.PI) !== Math.floor(this.phase / Math.PI) && this.grounded) this.onStep?.();
-      const amp = 0.75 * moving;
+      const amp = 0.6 * moving;
       const s = Math.sin(this.phase);
-      this.legL.rotation.x = s * amp;
-      this.legR.rotation.x = -s * amp;
-      this.armL.rotation.set(-s * amp * 0.8, 0, -0.08);
-      this.armR.rotation.set(s * amp * 0.8, 0, 0.08);
-      // Respiration au repos, rebond en marchant
-      const breath = (1 - moving) * Math.sin(t * 2.2) * 0.012;
-      this.torso.position.y = 0.95 + Math.abs(Math.cos(this.phase)) * 0.06 * moving + breath;
-      this.head.rotation.x = (1 - moving) * (0.08 + Math.sin(t * 0.6) * 0.06);
-      // Léger roulis de gueule de bois
+      // Cuisses en balancier, genoux fléchis pendant le passage de la jambe vers l'avant
+      p.thighL = s * amp;
+      p.thighR = -s * amp;
+      p.kneeL = moving * (0.1 + Math.max(0, Math.sin(this.phase + 1.2)) * 0.95);
+      p.kneeR = moving * (0.1 + Math.max(0, Math.sin(this.phase + 1.2 + Math.PI)) * 0.95);
+      p.footL = -p.kneeL * 0.3;
+      p.footR = -p.kneeR * 0.3;
+      // Bras ballants, coudes souples
+      p.armL = -s * amp * 0.7;
+      p.armR = s * amp * 0.7;
+      p.elbowL = -0.15 - moving * (0.2 + Math.max(0, -s) * 0.35);
+      p.elbowR = -0.15 - moving * (0.2 + Math.max(0, s) * 0.35);
+      p.armOut = 0.1 + (1 - moving) * 0.02;
+      // Respiration lourde au repos, rebond en marchant
+      const breath = (1 - moving) * Math.sin(t * 2.0) * 0.008;
+      p.bob = Math.abs(Math.cos(this.phase)) * 0.03 * moving + breath - (1 - moving) * 0.01 - moving * 0.015;
+      p.headNod = (1 - moving) * (0.2 + Math.sin(t * 0.6) * 0.06) + moving * 0.05;
+      p.headRoll = Math.sin(t * 0.7) * 0.06 * this.swayIntensity;
+      // Roulis de gueule de bois, dos voûté, épaules qui accompagnent le pas
       const wobble = Math.sin(t * 1.7) * 0.05 + Math.sin(t * 0.9 + 1) * 0.04;
-      this.torso.rotation.z = wobble * this.swayIntensity;
-      this.torso.rotation.x = moving * 0.12;
+      p.roll = wobble * this.swayIntensity;
+      p.lean = 0.08 + moving * 0.08;
+      p.twist = -s * 0.08 * moving;
       if (!this.grounded) {
-        this.legL.rotation.x = -0.5;
-        this.legR.rotation.x = 0.3;
-        this.armL.rotation.set(-2.6, 0, -0.3);
-        this.armR.rotation.set(-2.6, 0, 0.3);
+        p.thighL = -0.7;
+        p.thighR = 0.15;
+        p.kneeL = 1.0;
+        p.kneeR = 0.5;
+        p.armL = -2.3;
+        p.armR = -2.3;
+        p.armOut = 0.35;
+        p.elbowL = -0.3;
+        p.elbowR = -0.3;
       }
     } else if (this.pose === 'ride') {
-      this.head.rotation.x = 0;
       // Debout sur la trottinette, mains sur le guidon
-      this.legL.rotation.x = 0.1;
-      this.legR.rotation.x = -0.25;
-      this.armL.rotation.set(-1.2, 0, 0.2);
-      this.armR.rotation.set(-1.2, 0, -0.2);
-      this.torso.position.y = 0.95;
-      this.torso.rotation.set(0.1, 0, Math.sin(t * 1.3) * 0.04);
+      p.headNod = 0.05;
+      p.thighL = 0.05;
+      p.thighR = -0.3;
+      p.kneeL = 0.15;
+      p.kneeR = 0.4;
+      p.armL = -0.95;
+      p.armR = -0.95;
+      p.armOut = 0.12;
+      p.elbowL = -0.5;
+      p.elbowR = -0.5;
+      p.lean = 0.14;
+      p.roll = Math.sin(t * 1.3) * 0.04;
     } else if (this.pose === 'pedal') {
       this.phase += dt * this.pedalSpeed;
       const s = Math.sin(this.phase);
-      this.legL.rotation.x = -1.2 + s * 0.45;
-      this.legR.rotation.x = -1.2 - s * 0.45;
-      this.armL.rotation.set(-1.1, 0, 0.15);
-      this.armR.rotation.set(-1.1, 0, -0.15);
-      this.torso.position.y = 0.95;
-      this.torso.rotation.set(0.15, 0, 0);
+      // Assis bas, genoux remontés qui pédalent
+      p.thighL = -1.35 + s * 0.4;
+      p.thighR = -1.35 - s * 0.4;
+      p.kneeL = 1.6 - s * 0.35;
+      p.kneeR = 1.6 + s * 0.35;
+      p.armL = -0.95;
+      p.armR = -0.95;
+      p.armOut = 0.1;
+      p.elbowL = -0.6;
+      p.elbowR = -0.6;
+      p.lean = 0.22;
+      p.headNod = 0.05;
     }
+    this.hero.setPose(p);
   }
 
   private syncObject(): void {

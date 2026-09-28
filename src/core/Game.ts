@@ -5,6 +5,7 @@ import { RNG } from './rng';
 import { MODES, type Mode, type State } from './GameState';
 import { Environment } from '../world/Environment';
 import { Player, PLAYER_CENTER } from '../player/Player';
+import { preloadHero } from '../player/HeroModel';
 import { ThirdPersonCamera } from '../player/ThirdPersonCamera';
 import { generateCity, type City } from '../world/CityGenerator';
 import { Item } from '../items/Item';
@@ -107,7 +108,7 @@ export class Game {
   }
 
   async init(): Promise<void> {
-    await Promise.all([this.renderer.init(), initPhysics()]);
+    await Promise.all([this.renderer.init(), initPhysics(), preloadHero()]);
     const backend = (this.renderer as unknown as { backend: { isWebGPUBackend?: boolean } }).backend;
     this.backend = backend.isWebGPUBackend ? 'webgpu' : 'webgl2';
     this.last = performance.now();

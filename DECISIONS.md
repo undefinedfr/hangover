@@ -72,3 +72,12 @@
 - Maison d'arrivée : pavillon bleu à porte jaune, volets blancs, toit rouge sombre, avec une pancarte « MAISON — Enfin. » dans le jardin.
 - Bords de ville : le quartier continue en décor (maisons sans collision de l'autre côté de la dernière rue).
 - Cachettes adaptées : boîtes aux lettres, poubelles à roulettes, bornes d'incendie, haies, allées de garage, jardins de derrière.
+
+## Personnage (itération 5) : modèle humain réaliste MakeHuman
+- **Écart assumé à la règle « aucun asset externe »** (demande explicite : « un personnage beaucoup plus réaliste », option « modèle 3D externe » choisie). Le reste du jeu reste 100 % procédural.
+- Source : données système de [MakeHuman](http://www.makehumancommunity.org/) (maillage de base, squelette par défaut, poids, cibles de morphing, peau, yeux, sourcils, cils, chaussures), sous licence **CC0** depuis la v1.1. Rien n'est versionné à part le résultat : `scripts/character/fetch_assets.sh` télécharge `makehuman-data` (npm) et `targets.npz` (paquet PyPI `makehuman`) dans `.cache/`, et `scripts/character/build_hero.py` (numpy) écrit `public/models/hero.glb` (~3,5 Mo, 163 os, ~43 k triangles). Commande : `npm run build:hero`.
+- Morphologie : homme jeune, 1,81 m, un peu de ventre, cou épais.
+- Squelette sans rotation de repos (pivot au joint) : l'animation reste procédurale (`HeroPose` : cuisses, genoux, chevilles, colonne, tête, bras). Les bras de la pose en A sont réorientés vers une direction cible (`setFromUnitVectors`).
+- Vêtements générés dans le script en décalant des régions du corps le long des normales lissées (ils suivent donc les poids du corps) : sweat jusqu'aux poignets, col ample, capuche relevée (tête lissée sans oreilles ni nez, ouverture ovale du visage, bord roulotté en tube), caleçon, chaussettes dépareillées. Chaussures : proxies MakeHuman (basket à gauche, chaussure de ville à droite, une seule de chaque paire).
+- Matériaux TSL dans `HeroModel.ts` : sweat chiné avec côtes, poche kangourou et vomi (coulures, bord humide, morceaux), chaussette rayée, caleçon à pois, peau avec barbe de trois jours, cernes et crâne rasé sous la capuche. Tutu (trois couches de tulle) et éclaboussure sur la basket ajoutés à l'exécution via des ancres du glb (`anchor_tutu`, `anchor_glasses`).
+- Le modèle est préchargé dans `Game.init()` puis cloné (`SkeletonUtils.clone`) à chaque partie.

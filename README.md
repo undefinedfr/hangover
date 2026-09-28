@@ -2,13 +2,15 @@
 
 Jeu 3D dans le navigateur, vue à la 3e personne. Tu te réveilles sur un banc public après une soirée trop arrosée. Tes lunettes, ton téléphone, ton portefeuille, tes clés… tout a disparu. Retrouve tes affaires éparpillées dans la ville, récupère ta voiture (celle avec un cône de chantier sur le toit) et rentre chez toi.
 
-Une banlieue résidentielle en plein jour : pavillons en brique ou en bardage, pelouses, clôtures à piquets, poteaux électriques, arbres feuillus, et un petit centre commerçant en brique. Humour léger, et tout est généré par le code : aucun asset externe.
+Une banlieue résidentielle en plein jour : pavillons en brique ou en bardage, pelouses, clôtures à piquets, poteaux électriques, arbres feuillus, et un petit centre commerçant en brique. Humour léger. La ville est entièrement générée par le code ; seul le héros est un modèle humain réaliste construit à partir des données libres (CC0) de MakeHuman.
 
 **Démo :** https://undefinedfr.github.io/hangover/ (une fois GitHub Pages activé, voir [Déploiement](#déploiement))
 
 ![Réveil difficile : sans lunettes, tout est flou au-delà de quelques mètres](docs/screenshot.png)
 
 ![Avec les lunettes, le monde redevient net](docs/screenshot-net.png)
+
+Le héros : sweat à capuche sur la tête, tutu rose, une basket et une chaussure de ville, chaussettes dépareillées et du vomi sur le sweat. Il a eu une soirée.
 
 ## Contrôles
 
@@ -62,12 +64,13 @@ Chaque partie a une **seed** (`?seed=1234&mode=normal` dans l'URL) pour rejouer 
 - [Rapier](https://rapier.rs) : collisions, `KinematicCharacterController` pour le personnage et les véhicules.
 - TypeScript strict + Vite. HUD et menus en HTML/CSS. Sons synthétisés en WebAudio.
 - Ville, objets et véhicules générés procéduralement (RNG mulberry32 seedé), mobilier en `InstancedMesh`.
+- Héros : modèle MakeHuman (CC0) avec squelette, vêtements générés par script, animation procédurale des os (voir [DECISIONS.md](DECISIONS.md)).
 
 ```
 src/
   core/      Game, boucle à pas fixe 60 Hz, Input, GameState, RNG seedé, Physics
   world/     CityGenerator, props, maison d'arrivée, matériaux TSL, environnement
-  player/    personnage + animation procédurale, caméra 3e personne
+  player/    héros (glb MakeHuman, matériaux TSL, animation procédurale), caméra 3e personne
   vehicles/  Vehicle (base), Car, Scooter, Tricycle
   items/     modèles, Item, ItemSpawner, Inventory
   fx/        DrunkBlur (post-process TSL)
@@ -75,6 +78,8 @@ src/
   audio/     AudioManager (WebAudio)
   debug/     hook de test window.__game
 tests/       tests Playwright
+scripts/character/  construction du héros (téléchargement des données MakeHuman, script numpy → public/models/hero.glb)
+tools/       page d'aperçu du héros (dev)
 ```
 
 ## Commandes
@@ -86,11 +91,16 @@ npm run build      # build de production dans dist/
 npm run preview    # sert le build
 npm run test:e2e   # tests de fumée Playwright (sur le build)
 npm run capture    # régénère public/og-image.png et docs/*.png (build servi sur :4173)
+npm run build:hero # reconstruit public/models/hero.glb (Python 3 + numpy, télécharge les données MakeHuman)
 ```
 
 Les tests tournent dans Chromium headless en rendu logiciel (SwiftShader). Ils vérifient : chargement sans erreur, menu, rendu non vide, déplacement, saut, collisions avec les immeubles, ramassage de chaque objet, flou avant/après lunettes, véhicules, pause, mini-carte, écran navigateur non supporté et scénario complet jusqu'à la victoire.
 
 Hook de test : `window.__game` expose `state`, `mode`, `seed`, `inventory`, `player.position`, `inVehicle`, `fps`, ainsi que `debug.startGame(mode, seed)` et `debug.teleportTo(nom)`.
+
+## Crédits
+
+Le corps, le squelette, la peau, les yeux, sourcils, cils et chaussures du héros viennent des données système de [MakeHuman](http://www.makehumancommunity.org/), publiées sous licence CC0.
 
 ## Déploiement
 

@@ -78,3 +78,10 @@ Limites connues (mises à jour) :
 - ✅ Quartier pavillonnaire complet (maisons, jardins, allées, clôtures, boîtes aux lettres, poubelles), rues à double ligne jaune, poteaux et fils électriques, arbres feuillus, petit centre en brique.
 - ✅ Lumière de jour, ciel bleu, caméra proche derrière le personnage.
 - Performance mesurée (normal, qualité détaillée) : ~0,46 M triangles et ~590 appels de dessin par image.
+
+## Itération 4 — Héros réaliste (MakeHuman)
+- ✅ Nouveau héros construit à partir des données CC0 de MakeHuman : vrai corps humain skinné (163 os), visage texturé, yeux, sourcils, cils, barbe de trois jours.
+- ✅ Tenue : sweat gris chiné capuche relevée, vomi qui coule sur le torse, tutu rose, caleçon à pois, chaussette rayée + basket à gauche, chaussette noire + chaussure de ville à droite.
+- ✅ Animation procédurale des os (marche, saut, trottinette, tricycle) ; lunettes attachées au visage une fois trouvées.
+- ✅ Pipeline reproductible : `npm run build:hero` (Python 3 + numpy), page d'aperçu `tools/hero-preview.html` (`npx vite` puis `/tools/hero-preview.html?yaw=0.4&dist=0.9&y=1.6`).
+- Limites : vêtements obtenus par décalage du corps (pas de simulation de tissu) ; le glb pèse ~3,5 Mo (non compressé).

@@ -25,6 +25,7 @@ export interface GameHook {
     camera(distance: number, pitch: number, yaw?: number): void;
     teleportXYZ(x: number, y: number, z: number): void;
     elapsed(): number;
+    facing(): number;
     stats(): { triangles: number; calls: number };
     budget(): Array<{ name: string; tris: number; count: number }>;
     layout(): { start: P; house: P; car: P; items: Array<P & { id: string }> };
@@ -83,6 +84,7 @@ export function installHook(game: Game, start: (mode: Mode, seed: number) => voi
       teleportTo: (name) => game.debugTeleport(name),
       interact: () => game.input.press('KeyE'),
       elapsed: () => game.elapsed,
+      facing: () => game.player?.facing ?? 0,
       budget: () => {
         const out: Array<{ name: string; tris: number; count: number }> = [];
         game.scene.traverse((o) => {
