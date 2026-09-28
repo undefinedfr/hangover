@@ -2,7 +2,7 @@
 
 Jeu 3D dans le navigateur, vue à la 3e personne. Tu te réveilles sur un banc public après une soirée trop arrosée. Tes lunettes, ton téléphone, ton portefeuille, tes clés… tout a disparu. Retrouve tes affaires éparpillées dans la ville, récupère ta voiture (celle avec un cône de chantier sur le toit) et rentre chez toi.
 
-Un Paris stylisé au petit matin (immeubles haussmanniens, toits en zinc, colonnes Morris, bancs verts, platanes), humour léger, et tout est généré par le code : aucun asset externe.
+Une banlieue résidentielle en plein jour : pavillons en brique ou en bardage, pelouses, clôtures à piquets, poteaux électriques, arbres feuillus, et un petit centre commerçant en brique. Humour léger, et tout est généré par le code : aucun asset externe.
 
 **Démo :** https://undefinedfr.github.io/hangover/ (une fois GitHub Pages activé, voir [Déploiement](#déploiement))
 

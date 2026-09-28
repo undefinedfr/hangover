@@ -47,13 +47,13 @@ function transformed(g: THREE.BufferGeometry, pos: [number, number, number], sca
   return g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion(), new THREE.Vector3(scale, scale, scale)));
 }
 
-// ---------------------------------------------------------------- Mobilier parisien
+// ---------------------------------------------------------------- Mobilier
 
 const IRON = 0x21352c;
 const PAINT_GREEN = 0x3d6a52;
 
 /** Banc Davioud : piètement en fonte, lattes peintes en vert. Assise vers +z. */
-export function benchGeometry(): THREE.BufferGeometry {
+export function benchGeometry(slat = PAINT_GREEN, frame = IRON): THREE.BufferGeometry {
   const side = new THREE.Shape();
   // Profil latéral (z, y) du piètement : pied avant, assise, dossier incliné
   side.moveTo(0.22, 0);
@@ -72,224 +72,17 @@ export function benchGeometry(): THREE.BufferGeometry {
   const legGeo = new THREE.ExtrudeGeometry(side, { depth: 0.07, bevelEnabled: false, curveSegments: 1 });
   legGeo.rotateY(-Math.PI / 2);
   const parts: THREE.BufferGeometry[] = [];
-  for (const x of [-0.78, 0.78]) parts.push(part(legGeo, IRON, [x + 0.035, 0, 0]));
-  for (let i = 0; i < 4; i++) parts.push(part(box, PAINT_GREEN, [0, 0.47, 0.22 - i * 0.115], [0, 0, 0], [1.8, 0.045, 0.09]));
+  for (const x of [-0.78, 0.78]) parts.push(part(legGeo, frame, [x + 0.035, 0, 0]));
+  for (let i = 0; i < 4; i++) parts.push(part(box, slat, [0, 0.47, 0.22 - i * 0.115], [0, 0, 0], [1.8, 0.045, 0.09]));
   for (let i = 0; i < 3; i++) {
     const t = i / 2;
-    parts.push(part(box, PAINT_GREEN, [0, 0.58 + t * 0.26, -0.2 - t * 0.1], [-0.35, 0, 0], [1.8, 0.1, 0.035]));
+    parts.push(part(box, slat, [0, 0.58 + t * 0.26, -0.2 - t * 0.1], [-0.35, 0, 0], [1.8, 0.1, 0.035]));
   }
   return merge(parts);
-}
-
-/** Poubelle « Vigipirate » : cerceau vert sur poteau et sac translucide. */
-export function binGeometry(): THREE.BufferGeometry {
-  const bag = lathe(
-    [
-      [0.001, 0.25],
-      [0.14, 0.27],
-      [0.22, 0.42],
-      [0.25, 0.7],
-      [0.27, 0.92],
-      [0.25, 0.95],
-    ],
-    12,
-  );
-  return merge([
-    part(cyl(0.045, 0.05, 1.05, 8), IRON, [0, 0.52, -0.3]),
-    part(box, IRON, [0, 0.93, -0.15], [0, 0, 0], [0.05, 0.05, 0.28]),
-    part(new THREE.TorusGeometry(0.27, 0.025, 6, 20), PAINT_GREEN, [0, 0.95, 0], [Math.PI / 2, 0, 0]),
-    part(new THREE.TorusGeometry(0.27, 0.02, 6, 20), PAINT_GREEN, [0, 0.8, 0], [Math.PI / 2, 0, 0]),
-    part(bag, 0xa8bfa6),
-  ]);
-}
-
-/** Candélabre parisien : pied mouluré, fût, lanterne vitrée. */
-export function lampGeometry(): THREE.BufferGeometry {
-  const post = lathe(
-    [
-      [0.2, 0],
-      [0.15, 0.18],
-      [0.13, 0.42],
-      [0.1, 0.55],
-      [0.075, 3.55],
-      [0.1, 3.62],
-      [0.08, 3.72],
-      [0.07, 3.95],
-      [0.12, 4.0],
-    ],
-    7,
-  );
-  const glass = lathe(
-    [
-      [0.12, 4.0],
-      [0.25, 4.5],
-      [0.27, 4.58],
-    ],
-    6,
-  );
-  const cap = lathe(
-    [
-      [0.33, 4.58],
-      [0.31, 4.66],
-      [0.14, 4.82],
-      [0.05, 4.9],
-      [0.07, 4.97],
-      [0.001, 5.05],
-    ],
-    6,
-  );
-  const ring = cyl(0.13, 0.13, 0.08, 10);
-  return merge([part(post, IRON), part(glass, 0xffe6a8), part(cap, IRON), part(ring, 0x9c8a4a, [0, 1.2, 0])]);
-}
-
-/** Potelet (borne anti-stationnement). */
-export function bollardGeometry(): THREE.BufferGeometry {
-  return merge([
-    part(
-      lathe(
-        [
-          [0.06, 0],
-          [0.055, 0.78],
-          [0.07, 0.8],
-          [0.07, 0.86],
-          [0.055, 0.9],
-          [0.001, 0.97],
-        ],
-        6,
-      ),
-      0x2a3a31,
-    ),
-    part(cyl(0.062, 0.062, 0.05, 6), 0xb9a25a, [0, 0.7, 0]),
-  ]);
-}
-
-/** Colonne Morris (corps sans les affiches). */
-export function morrisGeometry(): THREE.BufferGeometry {
-  const body = lathe(
-    [
-      [0.78, 0],
-      [0.78, 0.3],
-      [0.7, 0.36],
-      [0.68, 0.4],
-      [0.68, 2.55],
-      [0.8, 2.62],
-      [0.82, 2.75],
-      [0.72, 2.82],
-      [0.72, 3.05],
-      [0.62, 3.3],
-      [0.38, 3.55],
-      [0.14, 3.72],
-      [0.06, 3.9],
-      [0.001, 4.0],
-    ],
-    16,
-  );
-  return merge([part(body, 0x2f5a47)]);
-}
-
-/** Fontaine Wallace simplifiée : piédestal, quatre cariatides, dôme. */
-export function wallaceGeometry(): THREE.BufferGeometry {
-  const green = 0x26503f;
-  const parts = [
-    part(
-      lathe(
-        [
-          [0.45, 0],
-          [0.45, 0.22],
-          [0.36, 0.3],
-          [0.3, 0.85],
-          [0.38, 0.95],
-          [0.36, 1.02],
-        ],
-        8,
-      ),
-      green,
-    ),
-    part(
-      lathe(
-        [
-          [0.44, 1.95],
-          [0.44, 2.05],
-          [0.3, 2.25],
-          [0.12, 2.42],
-          [0.05, 2.6],
-          [0.001, 2.66],
-        ],
-        8,
-      ),
-      green,
-    ),
-  ];
-  for (let k = 0; k < 4; k++) {
-    const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
-    const x = Math.cos(a) * 0.24;
-    const z = Math.sin(a) * 0.24;
-    parts.push(part(cyl(0.06, 0.09, 0.75, 6), green, [x, 1.4, z]));
-    parts.push(part(new THREE.IcosahedronGeometry(0.075, 0), green, [x, 1.84, z]));
-  }
-  return merge(parts);
-}
-
-/** Grille d'arbre en fonte au pied des platanes. */
-export function treeGrateGeometry(): THREE.BufferGeometry {
-  return merge([
-    part(box, 0x2b2d2f, [0, 0.008, 0], [0, 0, 0], [1.5, 0.016, 1.5]),
-    part(new THREE.TorusGeometry(0.42, 0.03, 4, 16), 0x3a3c3f, [0, 0.018, 0], [Math.PI / 2, 0, 0]),
-  ]);
 }
 
 // ---------------------------------------------------------------- Végétation
 
-const bark = [new THREE.Color(0xc9bf9c), new THREE.Color(0x9a9676), new THREE.Color(0xe0d8bd), new THREE.Color(0x8a8c6c)];
-const leafDark = new THREE.Color(0x4a7a3c);
-const leafLight = new THREE.Color(0xa6cc6c);
-const leafWarm = new THREE.Color(0xc7c96a);
-
-/** Platane : tronc à l'écorce marbrée, houppier en bouquets bosselés. */
-export function treeGeometry(): THREE.BufferGeometry {
-  const trunk = organic(
-    lathe(
-      [
-        [0.28, 0],
-        [0.21, 0.35],
-        [0.18, 1.2],
-        [0.16, 2.2],
-        [0.12, 2.9],
-      ],
-      8,
-    ),
-    0.05,
-    (_x, _y, _z, n) => bark[Math.floor(n * bark.length)].clone(),
-  );
-  const branch = (len: number, rx: number, rz: number, y: number) => {
-    const g = cyl(0.05, 0.1, len, 5);
-    g.translate(0, len / 2, 0);
-    g.rotateX(rx);
-    g.rotateZ(rz);
-    g.translate(0, y, 0);
-    return part(g, 0xa9a283);
-  };
-  const blobs: Array<[number, number, number, number]> = [
-    [0, 4.1, 0, 1.45],
-    [0.9, 3.6, 0.3, 1.05],
-    [-0.8, 3.7, -0.4, 1.1],
-    [0.2, 3.4, -0.95, 0.95],
-    [-0.3, 3.35, 0.95, 0.95],
-    [0.35, 4.8, 0.2, 0.95],
-  ];
-  const crown = blobs.map(([x, y, z, r]) =>
-    transformed(
-      organic(new THREE.IcosahedronGeometry(1, 1), 0.16, (_vx, vy, _vz, n) => {
-        const t = THREE.MathUtils.clamp((vy + 1) / 2, 0, 1);
-        const c = leafDark.clone().lerp(leafLight, t * 0.85 + n * 0.15);
-        return n > 0.85 ? c.lerp(leafWarm, 0.4) : c;
-      }),
-      [x, y, z],
-      r,
-    ),
-  );
-  return merge([trunk, branch(1.3, 0.5, 0.4, 2.3), branch(1.2, -0.45, -0.5, 2.4), branch(1.1, 0.3, -0.6, 2.6), ...crown]);
-}
 
 /** Buis taillé en boule. */
 export function bushGeometry(): THREE.BufferGeometry {
@@ -380,4 +173,149 @@ export const WHEEL_POS: Array<[number, number]> = [
 export function carGeometry(paint = 0xffffff): THREE.BufferGeometry {
   const w = wheelGeometry();
   return merge([...carBodyParts(paint), ...WHEEL_POS.map(([x, z]) => part(w, KEEP_COLORS, [x, 0.34, z]))]);
+}
+
+// ---------------------------------------------------------------- Banlieue résidentielle
+
+/** Poteau électrique en bois : traverse le long de la rue (x), rue vers +z. */
+export function poleGeometry(light: boolean, transformer: boolean): THREE.BufferGeometry {
+  const wood = 0x6e5d4b;
+  const parts = [
+    part(cyl(0.11, 0.15, 9, 7), wood, [0, 4.5, 0]),
+    part(box, 0x5e4f40, [0, 8.4, 0], [0, 0, 0], [2.4, 0.13, 0.13]),
+    part(box, 0x5e4f40, [0, 7.9, 0], [0, 0, 0.9], [0.06, 0.9, 0.06]),
+  ];
+  for (const x of [-1.05, 0, 1.05]) parts.push(part(cyl(0.05, 0.06, 0.18, 6), 0x9fb7a8, [x, 8.56, 0]));
+  if (transformer) {
+    parts.push(part(cyl(0.3, 0.3, 0.9, 10), 0x8b9096, [0, 7.0, -0.35]));
+    parts.push(part(cyl(0.32, 0.32, 0.06, 10), 0x6d7278, [0, 7.48, -0.35]));
+  }
+  if (light) {
+    // Lampadaire « cobra » : bras vers la chaussée
+    parts.push(part(cyl(0.035, 0.035, 2.2, 5), 0x8a8f96, [0, 7.3, 1.05], [Math.PI / 2 - 0.12, 0, 0]));
+    parts.push(part(box, 0x8a8f96, [0, 7.42, 2.2], [0.1, 0, 0], [0.34, 0.14, 0.7]));
+    parts.push(part(box, 0xfff4d6, [0, 7.34, 2.24], [0.1, 0, 0], [0.26, 0.03, 0.5]));
+  }
+  return merge(parts);
+}
+
+/** Bouche d'incendie américaine. */
+export function hydrantGeometry(): THREE.BufferGeometry {
+  const red = 0xc4382c;
+  return merge([
+    part(cyl(0.2, 0.22, 0.08, 10), 0x8c8f93, [0, 0.04, 0]),
+    part(cyl(0.14, 0.15, 0.55, 10), red, [0, 0.35, 0]),
+    part(cyl(0.18, 0.16, 0.08, 10), red, [0, 0.62, 0]),
+    part(new THREE.SphereGeometry(0.14, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0xe0b32e, [0, 0.66, 0]),
+    part(cyl(0.05, 0.05, 0.1, 8), 0xe0b32e, [0, 0.82, 0]),
+    part(cyl(0.06, 0.06, 0.42, 8), red, [0, 0.45, 0], [0, 0, Math.PI / 2]),
+    part(cyl(0.08, 0.08, 0.12, 8), red, [0, 0.45, 0.14], [Math.PI / 2, 0, 0]),
+  ]);
+}
+
+/** Boîte aux lettres sur poteau, drapeau rouge. Ouverture vers +z (la rue). */
+export function mailboxGeometry(): THREE.BufferGeometry {
+  return merge([
+    part(box, 0x6a553f, [0, 0.55, 0], [0, 0, 0], [0.1, 1.1, 0.1]),
+    part(box, 0x2b2e33, [0, 1.15, 0.05], [0, 0, 0], [0.26, 0.22, 0.5]),
+    part(new THREE.CylinderGeometry(0.13, 0.13, 0.5, 10, 1, false, 0, Math.PI), 0x2b2e33, [0, 1.26, 0.05], [Math.PI / 2, 0, Math.PI / 2]),
+    part(box, 0xc4382c, [0.15, 1.3, -0.05], [0, 0, 0], [0.02, 0.2, 0.08]),
+  ]);
+}
+
+/** Poubelle à roulettes (conteneur). Couvercle vers le haut, poignée côté -z. */
+export function wheelieBinGeometry(): THREE.BufferGeometry {
+  return merge([
+    part(box, 0xffffff, [0, 0.5, 0], [0, 0, 0], [0.58, 0.95, 0.68]),
+    part(box, 0xffffff, [0, 1.0, 0.02], [0, 0, 0], [0.62, 0.06, 0.74]),
+    part(box, 0x222428, [0, 0.95, -0.36], [0, 0, 0], [0.5, 0.05, 0.06]),
+    part(cyl(0.1, 0.1, 0.06, 8), 0x222428, [0.26, 0.1, -0.3], [0, 0, Math.PI / 2]),
+    part(cyl(0.1, 0.1, 0.06, 8), 0x222428, [-0.26, 0.1, -0.3], [0, 0, Math.PI / 2]),
+  ]);
+}
+
+/** Tronc et branches d'un feuillu (le houppier est fait de cartes de feuilles). */
+export function leafyTrunkGeometry(): THREE.BufferGeometry {
+  const barkCols = [new THREE.Color(0x5b4b3d), new THREE.Color(0x6e5d4c), new THREE.Color(0x4d4035)];
+  const trunk = organic(
+    lathe(
+      [
+        [0.3, 0],
+        [0.22, 0.4],
+        [0.19, 1.6],
+        [0.16, 2.6],
+        [0.1, 3.6],
+      ],
+      8,
+    ),
+    0.06,
+    (_x, _y, _z, n) => barkCols[Math.floor(n * barkCols.length)].clone(),
+  );
+  const branch = (len: number, rx: number, rz: number, y: number) => {
+    const g = cyl(0.04, 0.09, len, 5);
+    g.translate(0, len / 2, 0);
+    g.rotateX(rx);
+    g.rotateZ(rz);
+    g.translate(0, y, 0);
+    return part(g, 0x5b4b3d);
+  };
+  return merge([trunk, branch(1.8, 0.6, 0.5, 2.2), branch(1.7, -0.5, -0.6, 2.4), branch(1.5, 0.4, -0.7, 2.9), branch(1.5, -0.6, 0.5, 3.1)]);
+}
+
+/**
+ * Houppier en cartes de feuilles croisées : normales sphériques (éclairage doux), couleurs plus
+ * sombres en bas (occlusion factice). À utiliser avec leafMaterial().
+ */
+export function leafCrownGeometry(seed = 1, cards = 44, radius = [2.4, 2.0, 2.4], center = [0, 4.5, 0]): THREE.BufferGeometry {
+  let s = seed;
+  const rnd = () => {
+    s = (s * 16807) % 2147483647;
+    return s / 2147483647;
+  };
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const col: number[] = [];
+  const uvs: number[] = [];
+  const dark = new THREE.Color(0x4a6c35);
+  const light = new THREE.Color(0x86ad52);
+  const c = new THREE.Vector3(...center);
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  const v = new THREE.Vector3();
+  for (let i = 0; i < cards; i++) {
+    // Point dans l'ellipsoïde, plutôt vers la surface
+    const u = rnd() * Math.PI * 2;
+    const w = Math.acos(2 * rnd() - 1);
+    const r = 0.55 + 0.45 * Math.cbrt(rnd());
+    const p = new THREE.Vector3(Math.sin(w) * Math.cos(u) * radius[0] * r, Math.cos(w) * radius[1] * r, Math.sin(w) * Math.sin(u) * radius[2] * r).add(c);
+    const size = 2.0 + rnd() * 1.0;
+    const t = THREE.MathUtils.clamp((p.y - c.y) / radius[1] * 0.5 + 0.5, 0, 1);
+    const cc = dark.clone().lerp(light, t * 0.8 + rnd() * 0.2);
+    for (const extra of [0, Math.PI / 2]) {
+      q.setFromEuler(e.set((rnd() - 0.5) * 1.2, rnd() * Math.PI + extra, (rnd() - 0.5) * 0.8));
+      const corners = [
+        [-0.5, -0.5, 0, 0],
+        [0.5, -0.5, 1, 0],
+        [0.5, 0.5, 1, 1],
+        [-0.5, 0.5, 0, 1],
+      ];
+      const idx = [0, 1, 2, 0, 2, 3];
+      for (const k of idx) {
+        const [cx, cy, uu, vv] = corners[k];
+        v.set(cx * size, cy * size, 0).applyQuaternion(q).add(p);
+        pos.push(v.x, v.y, v.z);
+        const n = v.clone().sub(c).normalize();
+        nor.push(n.x, n.y * 0.8 + 0.2, n.z);
+        col.push(cc.r, cc.g, cc.b);
+        uvs.push(uu, vv);
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  g.computeBoundingSphere();
+  return g;
 }

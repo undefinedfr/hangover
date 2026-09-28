@@ -59,7 +59,8 @@ export interface BuildingSpec {
   w: number;
   d: number;
   h: number;
-  style: 0 | 1;
+  /** 0 haussmannien, 1 faubourg, 2 brique (rue commerçante). */
+  style: 0 | 1 | 2;
   /** Côtés donnant sur la rue : +x, -x, +z, -z. */
   street: { px: boolean; nx: boolean; pz: boolean; nz: boolean };
   base: number;
@@ -136,6 +137,20 @@ export class ArchitectureBuilder {
         }
       }
       this.addChimneys(x, top + 2.6, z, w, d, 0xe6d6bd);
+    } else if (b.style === 2) {
+      // Brique : toit plat, acrotère, équipements techniques
+      this.solid.push(part(box, 0x6f6a64, [x, top + 0.35, z], [0, 0, 0], [w + 0.2, 0.7, d + 0.2]));
+      this.solid.push(part(box, 0x55585c, [x, top + 0.05, z], [0, 0, 0], [w - 0.4, 0.3, d - 0.4]));
+      if (w > 6 && d > 6) {
+        this.solid.push(part(box, 0xa9adb1, [x + rng.range(-w / 4, w / 4), top + 0.8, z + rng.range(-d / 4, d / 4)], [0, 0, 0], [1.8, 1.0, 1.3]));
+        if (rng.chance(0.4)) {
+          const tx = x + rng.range(-w / 4, w / 4);
+          const tz = z + rng.range(-d / 4, d / 4);
+          this.solid.push(part(new THREE.CylinderGeometry(1.1, 1.1, 2.2, 10), 0x7a5a3e, [tx, top + 3.2, tz]));
+          this.solid.push(part(new THREE.ConeGeometry(1.2, 0.6, 10), 0x5a4a3a, [tx, top + 4.6, tz]));
+          for (const k of [-1, 1]) this.solid.push(part(box, 0x3a3c40, [tx + k * 0.8, top + 1.2, tz], [0, 0, 0], [0.12, 2.0, 0.12]));
+        }
+      }
     } else {
       // Faubourg : toit en tuiles à quatre pans
       this.solid.push(place(frustum(w + 0.5, d + 0.5, 2.4, Math.min(w, d) / 2 - 0.4, 0xc4694c), x, top - 0.05, z, 0));

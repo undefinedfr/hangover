@@ -23,13 +23,13 @@ const gridPCF = (mapSize: number) => Fn((inputs: { depthTexture: THREE.DepthText
 /** Ciel de petit matin, soleil bas, ombres longues qui suivent le joueur. */
 export class Environment {
   readonly sun: THREE.DirectionalLight;
-  readonly sunOffset = new THREE.Vector3(-60, 38, -45);
+  readonly sunOffset = new THREE.Vector3(-48, 52, -34);
   private readonly sky: THREE.Mesh;
 
   constructor(private readonly scene: THREE.Scene, private readonly shadowMap = 2048) {
-    const horizon = color(0xffc49a);
-    const zenith = color(0x7fb2e6);
-    const ground = color(0xd9b8c4);
+    const horizon = color(0xdfe9f1);
+    const zenith = color(0x5a92d6);
+    const ground = color(0xbcc6cc);
 
     const skyMat = new THREE.MeshBasicNodeMaterial({ side: THREE.BackSide, depthWrite: false });
     const h = positionLocal.normalize().y;
@@ -40,7 +40,7 @@ export class Environment {
     const proj = dir.xz.div(max(dir.y, float(0.04)).add(0.12)).mul(1.4);
     const n = mx_fractal_noise_float(vec3(proj.x.mul(0.55), proj.y.mul(1.5), time.mul(0.004)), isLite() ? 2 : 4, 2.0, 0.5);
     const cloud = smoothstep(0.05, 0.45, n).mul(smoothstep(0.02, 0.22, h)).mul(0.85);
-    const cloudLit = mix(color(0xffe0cc), color(0xb9a7c9), smoothstep(0.2, 0.9, n));
+    const cloudLit = mix(color(0xffffff), color(0xc4cfdb), smoothstep(0.2, 0.9, n));
     skyMat.colorNode = mix(skyBase, cloudLit, cloud);
     skyMat.fog = false;
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(900, 24, 12), skyMat);
@@ -51,17 +51,17 @@ export class Environment {
     // Soleil levant visible à l'horizon
     const sunDisc = new THREE.Mesh(
       new THREE.SphereGeometry(30, 16, 8),
-      Object.assign(new THREE.MeshBasicNodeMaterial({ color: 0xfff1c9 }), { fog: false }),
+      Object.assign(new THREE.MeshBasicNodeMaterial({ color: 0xfffbea }), { fog: false }),
     );
     sunDisc.position.copy(this.sunOffset).normalize().multiplyScalar(820);
     this.sky.add(sunDisc);
 
-    scene.fog = new THREE.Fog(0xf2c6a8, 60, 260);
+    scene.fog = new THREE.Fog(0xcfdbe6, 80, 330);
 
-    const hemi = new THREE.HemisphereLight(0xffd9b8, 0x6b7fa8, 1.3);
+    const hemi = new THREE.HemisphereLight(0xd4e4ff, 0x6f6a58, 1.25);
     scene.add(hemi);
 
-    this.sun = new THREE.DirectionalLight(0xffc98f, 2.6);
+    this.sun = new THREE.DirectionalLight(0xfff0dc, 3.1);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(shadowMap, shadowMap);
     (this.sun.shadow as unknown as { filterNode: unknown }).filterNode = gridPCF(shadowMap);

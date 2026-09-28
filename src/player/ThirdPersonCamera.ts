@@ -4,9 +4,9 @@ import type { Physics } from '../core/Physics';
 /** Caméra orbitale à la 3e personne, raccourcie quand un mur s'interpose. */
 export class ThirdPersonCamera {
   yaw = Math.PI;
-  pitch = 0.32;
-  distance = 5.5;
-  height = 1.6;
+  pitch = 0.14;
+  distance = 3.9;
+  height = 1.62;
   private current = 5.5;
   private readonly target = new THREE.Vector3();
   private readonly smoothedTarget = new THREE.Vector3();

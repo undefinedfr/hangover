@@ -74,9 +74,10 @@ export function facadeMaterial(): THREE.MeshStandardNodeMaterial {
   const W = select(sideX, d, w);
   const s = select(sideX, p.z.add(0.5).mul(d), p.x.add(0.5).mul(w));
   const y = p.y.mul(h);
-  const style = aInfo.x; // 0 haussmannien, 1 faubourg
+  const style = aInfo.x; // 0 haussmannien, 1 faubourg, 2 brique
   const seed = aInfo.y;
-  const faub = style.greaterThan(0.5);
+  const faub = style.greaterThan(0.5).and(style.lessThan(1.5));
+  const brick = style.greaterThan(1.5);
   const faceId = select(sideX, float(1), float(0)).add(select(n.x.add(n.z).greaterThan(0), float(2), float(0)));
 
   // --- Étages ---
@@ -109,7 +110,7 @@ export function facadeMaterial(): THREE.MeshStandardNodeMaterial {
   const railBars = mix(aastep(0.75, fract(cx.mul(8))), float(0.35), barFar)
     .add(band(fy, wy0.add(0.88), wy0.add(0.95)))
     .clamp(0, 1);
-  const rail = select(balconyFloor.or(faub), float(0), railZone.mul(railBars));
+  const rail = select(balconyFloor.or(faub).or(brick), float(0), railZone.mul(railBars));
 
   // Volets (faubourg)
   const shutterIn = ww.add(0.06);
@@ -131,7 +132,7 @@ export function facadeMaterial(): THREE.MeshStandardNodeMaterial {
   const shopGlass = band(bx, -1, bhw.sub(0.12)).mul(band(y, 0.3, 2.95)).mul(inGround);
   const sign = band(bx, -1, bhw.add(0.2)).mul(band(y, 3.1, 3.7)).mul(inGround);
   const jointFar = smoothstep(0.08, 0.3, fwidth(y.div(0.5)));
-  const rustic = select(faub, float(0), float(1).sub(aastep(0.05, fract(y.div(0.5)).mul(0.5))).mul(inGround)).mul(
+  const rustic = select(faub.or(brick), float(0), float(1).sub(aastep(0.05, fract(y.div(0.5)).mul(0.5))).mul(inGround)).mul(
     float(1).sub(jointFar),
   );
   const plinth = float(1).sub(aastep(0.35, y));
@@ -142,8 +143,16 @@ export function facadeMaterial(): THREE.MeshStandardNodeMaterial {
   const grain = isLite()
     ? float(0)
     : mx_noise_float(wp.mul(0.35)).mul(0.05).add(mx_noise_float(wp.mul(3.1)).mul(0.02).mul(fineFade));
-  const wallC = aWall.mul(grain.add(1));
-  const frameC = wallC.mul(1.1).min(vec3(1));
+  // Brique en appareil courant (style 2) : joints clairs, nuances par brique
+  const bRow = floor(y.div(0.085));
+  const bu = s.div(0.24).add(bRow.mul(0.5));
+  const bJoint = max(smoothstep(0.44, 0.5, abs(fract(bu).sub(0.5))), smoothstep(0.36, 0.5, abs(fract(y.div(0.085)).sub(0.5)))).mul(
+    float(1).sub(smoothstep(0.25, 0.9, fwidth(y.div(0.085)).mul(1.2))),
+  );
+  const bTint = hash(floor(bu).add(bRow.mul(37.1)).add(seed.mul(13))).sub(0.5).mul(0.22).add(1);
+  const brickC = mix(aWall.mul(bTint), vec3(0.8, 0.77, 0.72), bJoint.mul(0.8));
+  const wallC = select(brick, brickC, aWall.mul(grain.add(1)));
+  const frameC = select(brick, vec3(0.93, 0.92, 0.88), wallC.mul(1.1).min(vec3(1)));
   const iron = vec3(0.07, 0.08, 0.09);
   const cell = colIdx.add(floorIdx.mul(31)).add(seed.mul(997)).add(faceId.mul(7.3));
   const lit = aastep(0.9, hash(cell));

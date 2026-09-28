@@ -73,3 +73,8 @@ Limites connues : le 60 fps ne peut pas être mesuré dans l'environnement de de
 
 Limites connues (mises à jour) :
 - Les tests tournent en rendu logiciel (SwiftShader, qualité « légers », 960×540) : chaque démarrage de partie y coûte 10 à 30 s de compilation côté processus GPU, la suite complète prend ~30 min. Sur un vrai GPU le chargement est de l'ordre de la seconde.
+
+## Itération 3 — Rendu « banlieue en plein jour »
+- ✅ Quartier pavillonnaire complet (maisons, jardins, allées, clôtures, boîtes aux lettres, poubelles), rues à double ligne jaune, poteaux et fils électriques, arbres feuillus, petit centre en brique.
+- ✅ Lumière de jour, ciel bleu, caméra proche derrière le personnage.
+- Performance mesurée (normal, qualité détaillée) : ~0,46 M triangles et ~590 appels de dessin par image.

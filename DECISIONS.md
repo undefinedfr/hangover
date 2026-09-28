@@ -60,3 +60,15 @@
 - Bords de ville : rangée continue d'immeubles de l'autre côté de la dernière rue (décor sans collision) au lieu de la haie et des silhouettes roses.
 - Rendu : occlusion ambiante GTAO (demi-résolution, lissée), étalonnage (ombres légèrement lavande, hautes lumières dorées, +12 % de saturation, vignette légère), nuages procéduraux dans le ciel, PCF d'ombre déterministe 3×3 (le filtre par défaut de three.js utilise un bruit par pixel qui donnait du grain sur les vitres), motifs fins atténués selon `fwidth` (pas de moiré au loin).
 - Performance : les instances et l'architecture sont découpées en tuiles de 64 m (culling caméra et ombre possible) ; modèles allégés. En mode normal on passe de ~2,3 M à ~0,35 M triangles dessinés par image (ombres comprises).
+
+## Refonte 2 : quartier pavillonnaire en plein jour (référence fournie)
+- Nouvelle direction demandée à partir d'une capture de référence : banlieue résidentielle, lumière de jour, caméra proche derrière le personnage. La refonte « Paris » est remplacée (le code parisien inutilisé a été retiré).
+- Rendu : soleil plus haut (~40°), lumière neutre légèrement chaude, ciel bleu avec nuages blancs, brouillard bleuté, étalonnage sobre (saturation +6 %). Caméra à pied à 3,9 m, légèrement au-dessus des épaules, FOV 60°.
+- Rues : double ligne jaune continue, passages piétons « échelle », bordure béton, bande d'herbe entre bordure et trottoir (arbres, poteaux, boîtes aux lettres, bornes d'incendie), trottoir en béton à joints.
+- Poteaux électriques en bois (traverse, isolateurs, transformateurs, lampadaires « cobra » un poteau sur deux) sur deux côtés de chaque îlot, reliés par des fils à flèche parabolique (un seul `LineSegments` pour toute la ville).
+- Îlots pavillonnaires : deux rangées de maisons dos à dos (2 lots de 15 m par rangée), maisons à 1 ou 2 niveaux en bardage à clin ou en brique (shaders TSL), toit à deux pans en bardeaux avec débord et pignons, fenêtres à encadrement blanc (volets une fois sur deux), porche avec poteaux et auvent, cheminée, garage accolé à porte sectionnelle, allée de garage et allée piétonne en béton, boîte aux lettres, poubelles à roulettes, clôture à piquets ou haie devant, palissade grise derrière et entre les jardins.
+- Petit centre commerçant (îlots proches du centre) : façades en brique (style 2 du shader de façade) avec devantures, stores, toit plat à acrotère, climatiseurs et réservoirs d'eau ; le cinéma est dans ce style.
+- Arbres : tronc + branches + houppier en ~44 cartes de feuilles croisées (feuilles découpées en alpha-to-coverage, normales sphériques pour un éclairage doux), teinte par instance.
+- Maison d'arrivée : pavillon bleu à porte jaune, volets blancs, toit rouge sombre, avec une pancarte « MAISON — Enfin. » dans le jardin.
+- Bords de ville : le quartier continue en décor (maisons sans collision de l'autre côté de la dernière rue).
+- Cachettes adaptées : boîtes aux lettres, poubelles à roulettes, bornes d'incendie, haies, allées de garage, jardins de derrière.

@@ -30,6 +30,8 @@ interface Interaction {
 }
 
 const FIXED_DT = 1 / 60;
+/** Caméra à pied : juste derrière les épaules. */
+const FOOT_CAMERA = 3.9;
 const MAX_STEPS = 5;
 
 export class Game {
@@ -87,8 +89,8 @@ export class Game {
     this.renderer.shadowMap.enabled = !new URLSearchParams(location.search).get('debug')?.includes('noshadow');
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
-    this.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 1200);
+    this.renderer.toneMappingExposure = 1.0;
+    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200);
     this.input = new Input(canvas);
     this.resize();
     this.hud = new HUD(document.getElementById('ui')!);
@@ -132,7 +134,7 @@ export class Game {
     this.env = new Environment(this.scene, this.quality === 'basse' ? 1024 : 2048);
     if (this.quality === 'basse') {
       // Vue plus courte : le brouillard masque la coupure, les tuiles lointaines sont écartées
-      this.scene.fog = new THREE.Fog(0xf2c6a8, 40, 170);
+      this.scene.fog = new THREE.Fog(0xcfdbe6, 45, 175);
       this.camera.far = 190;
     } else {
       this.camera.far = 1200;
@@ -407,7 +409,7 @@ export class Game {
     player.setActive(true);
     player.teleport(spot.x, Math.max(spot.y, v.position.y) + 0.05, spot.z);
     player.facing = v.yaw;
-    this.cam!.distance = 5.5;
+    this.cam!.distance = FOOT_CAMERA;
     this.onVehicleChange?.(null);
   }
 

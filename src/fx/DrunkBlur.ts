@@ -83,11 +83,11 @@ export class DrunkBlur {
 
     // --- Étalonnage : ombres lavande, hautes lumières dorées, un peu plus de saturation ---
     const lum = dot(withAO, vec3(0.2126, 0.7152, 0.0722));
-    const shadowTint = pow(max(float(1).sub(lum.mul(1.6)), float(0)), float(2)).mul(vec3(0.014, 0.008, 0.026));
-    const warm = mix(vec3(1), vec3(1.07, 1.0, 0.9), smoothstep(0.35, 1.4, lum));
-    const saturated = mix(vec3(lum), withAO, 1.12);
+    const shadowTint = pow(max(float(1).sub(lum.mul(1.6)), float(0)), float(2)).mul(vec3(0.004, 0.004, 0.008));
+    const warm = mix(vec3(1), vec3(1.03, 1.0, 0.96), smoothstep(0.35, 1.4, lum));
+    const saturated = mix(vec3(lum), withAO, 1.06);
     const graded = saturated.mul(warm).add(shadowTint);
-    const baseVig = smoothstep(0.55, 1.05, length(screenUV.sub(0.5)).mul(1.35)).mul(0.18);
+    const baseVig = smoothstep(0.55, 1.05, length(screenUV.sub(0.5)).mul(1.35)).mul(0.12);
     const gradedV = graded.mul(float(1).sub(baseVig));
     this.sharpOut = vec4(gradedV, float(1));
 
@@ -112,7 +112,7 @@ export class DrunkBlur {
 
     const mixed = mix(gradedV, blurred, f);
     const vig = smoothstep(0.45, 0.95, length(screenUV.sub(0.5)).mul(1.4)).mul(this.amount).mul(0.35);
-    const out = vec4(mix(mixed, vec3(0.35, 0.22, 0.3), vig), float(1));
+    const out = vec4(mix(mixed, vec3(0.2, 0.2, 0.23), vig), float(1));
 
     this.pipeline = new THREE.RenderPipeline(renderer);
     this.pipeline.outputNode = out;

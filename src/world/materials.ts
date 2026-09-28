@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
 import {
-  abs,
   float,
   floor,
   fract,
@@ -13,6 +12,10 @@ import {
   max,
   smoothstep,
   mx_noise_float,
+  uv,
+  vec2,
+  length,
+  vertexColor,
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { isLite } from '../core/Quality';
@@ -39,52 +42,14 @@ function detail(coord: Node<'float'>, scale = 1): Node<'float'> {
   return float(1).sub(smoothstep(0.25, 0.9, fwidth(coord).mul(scale)));
 }
 
-/** Trottoir en dalles de pierre décalées, joints et nuances par dalle. */
-export function pavingMaterial(): THREE.MeshStandardNodeMaterial {
-  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.92 });
-  const wp = positionWorld;
-  const row = floor(wp.z.div(0.62));
-  const u = wp.x.div(1.05).add(row.mul(0.5));
-  const cellX = floor(u);
-  const jx = abs(fract(u).sub(0.5));
-  const jz = abs(fract(wp.z.div(0.62)).sub(0.5));
-  const joint = smoothstep(0.47, 0.5, max(jx, jz)).mul(detail(wp.x, 1.2));
-  const tint = hash(cellX.add(row.mul(71.3))).sub(0.5).mul(0.07);
-  const base = color(0xd9d1c4).mul(tint.add(1)).mul(noise(wp.mul(0.25)).mul(0.04).add(1));
-  mat.colorNode = mix(base, base.mul(0.8), joint);
-  return mat;
-}
-
 /** Enrobé : grain fin, rapiéçages, légère usure. */
 export function asphaltMaterial(): THREE.MeshStandardNodeMaterial {
   const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.95 });
   const wp = positionWorld;
   const patches = smoothstep(0.35, 0.6, noise(wp.mul(0.045)).add(0.5));
   const grain = noise(wp.mul(2.3)).mul(0.05).mul(detail(wp.x, 2));
-  const base = mix(color(0x4f505c), color(0x45464f), patches);
+  const base = mix(color(0x5d5f64), color(0x53555a), patches);
   mat.colorNode = base.mul(grain.add(1)).mul(noise(wp.mul(0.2)).mul(0.05).add(1));
-  return mat;
-}
-
-/** Caniveau en pavés. */
-export function cobbleMaterial(): THREE.MeshStandardNodeMaterial {
-  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.9 });
-  const wp = positionWorld;
-  const cx = fract(wp.x.div(0.22));
-  const cz = fract(wp.z.div(0.22));
-  const j = smoothstep(0.38, 0.5, max(abs(cx.sub(0.5)), abs(cz.sub(0.5)))).mul(detail(wp.x, 5));
-  const tint = hash(floor(wp.x.div(0.22)).add(floor(wp.z.div(0.22)).mul(57))).sub(0.5).mul(0.12);
-  const base = color(0x8d8a86).mul(tint.add(1));
-  mat.colorNode = mix(base, base.mul(0.55), j);
-  return mat;
-}
-
-/** Allées de parc en gravier clair. */
-export function gravelMaterial(): THREE.MeshStandardNodeMaterial {
-  const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1 });
-  const wp = positionWorld;
-  const speck = step(0.78, hash(floor(wp.x.mul(18)).add(floor(wp.z.mul(18)).mul(131)))).mul(detail(wp.x, 18));
-  mat.colorNode = mix(color(0xe3d3ae), color(0xb9a883), speck.mul(0.8)).mul(noise(wp.mul(0.3)).mul(0.05).add(1));
   return mat;
 }
 
@@ -92,8 +57,31 @@ export function gravelMaterial(): THREE.MeshStandardNodeMaterial {
 export function lawnMaterial(): THREE.MeshStandardNodeMaterial {
   const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1 });
   const wp = positionWorld;
-  const stripe = step(0.5, fract(wp.x.div(3)));
+  const stripe = step(0.5, fract(wp.x.div(3))).mul(0.5);
   const n = noise(wp.mul(0.18)).mul(0.08);
-  mat.colorNode = mix(color(0x86bf5f), color(0x9acc6c), stripe).mul(n.add(1));
+  mat.colorNode = mix(color(0x6f9c47), color(0x79a74f), stripe).mul(n.add(1));
+  return mat;
+}
+
+/** Feuillage en cartes : grappes de feuilles découpées en alpha, nuances par grappe. */
+export function leafMaterial(): THREE.MeshStandardNodeMaterial {
+  const mat = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide });
+  const u = uv();
+  // Deux grilles décalées de feuilles ovales qui se chevauchent : feuillage dense, bord déchiqueté
+  const leafAt = (scale: number, offset: number) => {
+    const st = u.mul(scale).add(offset);
+    const cell = floor(st);
+    const id = hash(cell.x.add(cell.y.mul(17.3)).add(offset * 31));
+    const f = fract(st).sub(0.5).add(vec2(hash(id.add(1.3)).sub(0.5), hash(id.add(7.1)).sub(0.5)).mul(0.3));
+    return { a: float(1).sub(smoothstep(0.34, 0.46, length(f.mul(vec2(1.0, 1.5))))), id };
+  };
+  const l1 = leafAt(4, 0);
+  const l2 = leafAt(4, 0.5);
+  const round = float(1).sub(smoothstep(0.3, 0.5, length(u.sub(0.5))));
+  mat.opacityNode = max(l1.a, l2.a).mul(round).mul(1.5);
+  mat.alphaTest = 0.5;
+  mat.alphaToCoverage = true;
+  const shade = mix(l1.id, l2.id, step(l1.a, l2.a));
+  mat.colorNode = vertexColor().mul(shade.mul(0.3).add(0.85));
   return mat;
 }
