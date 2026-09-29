@@ -549,7 +549,9 @@ export class Game {
   }
 
   private frame(now: number): void {
-    const dt = Math.min((now - this.last) / 1000, 0.1);
+    // L'horodatage de requestAnimationFrame peut retarder sur performance.now() (utilisé en fin de
+    // chargement) : jamais de pas négatif, sinon l'accumulateur gèle la simulation plusieurs secondes.
+    const dt = Math.min(Math.max((now - this.last) / 1000, 0), 0.1);
     this.last = now;
     this.fpsFrames++;
     this.fpsTime += dt;

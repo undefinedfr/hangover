@@ -85,3 +85,7 @@ Limites connues (mises à jour) :
 - ✅ Animation procédurale des os (marche, saut, trottinette, tricycle) ; lunettes attachées au visage une fois trouvées.
 - ✅ Pipeline reproductible : `npm run build:hero` (Python 3 + numpy), page d'aperçu `tools/hero-preview.html` (`npx vite` puis `/tools/hero-preview.html?yaw=0.4&dist=0.9&y=1.6`).
 - Limites : vêtements obtenus par décalage du corps (pas de simulation de tissu) ; le glb pèse ~3,5 Mo (non compressé).
+
+## Itération 5 — Lunettes abîmées
+- ✅ Nouvelles lunettes réalistes et cassées : verre fêlé, scotch sur le pont, branche tordue, monture de travers ; même modèle au sol et sur le nez.
+- ✅ Correctif : au démarrage d'une partie, le pas de temps pouvait devenir négatif (horodatage de `requestAnimationFrame` en retard sur `performance.now()`), ce qui gelait la simulation plusieurs secondes sur machine chargée. Le pas est désormais borné à [0 ; 0,1 s].

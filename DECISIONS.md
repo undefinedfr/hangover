@@ -81,3 +81,8 @@
 - Vêtements générés dans le script en décalant des régions du corps le long des normales lissées (ils suivent donc les poids du corps) : sweat jusqu'aux poignets, col ample, capuche relevée (tête lissée sans oreilles ni nez, ouverture ovale du visage, bord roulotté en tube), caleçon, chaussettes dépareillées. Chaussures : proxies MakeHuman (basket à gauche, chaussure de ville à droite, une seule de chaque paire).
 - Matériaux TSL dans `HeroModel.ts` : sweat chiné avec côtes, poche kangourou et vomi (coulures, bord humide, morceaux), chaussette rayée, caleçon à pois, peau avec barbe de trois jours, cernes et crâne rasé sous la capuche. Tutu (trois couches de tulle) et éclaboussure sur la basket ajoutés à l'exécution via des ancres du glb (`anchor_tutu`, `anchor_glasses`).
 - Le modèle est préchargé dans `Game.init()` puis cloné (`SkeletonUtils.clone`) à chaque partie.
+
+## Lunettes cassées
+- Modèle dédié (`src/items/glasses.ts`) à l'échelle réelle, partagé entre l'objet au sol (agrandi ×5,5 pour rester lisible) et les lunettes portées (ancre `anchor_glasses` du héros).
+- Monture pantos en acétate écaille (bruit TSL), charnières métalliques, verre gauche intact et transparent, verre droit fêlé en étoile (rayons irréguliers + arcs concentriques calculés en TSL, plus opaques et rugueux sur les fissures).
+- Traces de la soirée : pont réparé au ruban adhésif, branche gauche tordue vers le bas et l'extérieur, face avant vrillée et monture de travers.

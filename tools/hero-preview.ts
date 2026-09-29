@@ -1,6 +1,7 @@
 // Page de développement : affiche le héros seul (npx vite puis /tools/hero-preview.html?yaw=0&dist=2.2&y=1.2)
 import * as THREE from 'three/webgpu';
 import { loadHero, REST_POSE } from '../src/player/HeroModel';
+import { buildBrokenGlasses } from '../src/items/glasses';
 
 const q = new URLSearchParams(location.search);
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -31,6 +32,19 @@ camera.lookAt(0, ty, 0);
 await renderer.init();
 const hero = await loadHero();
 scene.add(hero.root);
+if (q.get('glasses')) {
+  const worn = buildBrokenGlasses();
+  worn.scale.setScalar(0.93);
+  hero.glassesAnchor.add(worn);
+}
+if (q.get('solo')) {
+  hero.root.visible = false;
+  const g = buildBrokenGlasses();
+  g.scale.setScalar(Number(q.get('solo')));
+  g.position.y = ty;
+  g.rotation.y = Number(q.get('spin') ?? 0);
+  scene.add(g);
+}
 const hide = (q.get('hide') ?? '').split('|').filter(Boolean);
 hero.root.traverse((o) => { if (hide.includes(o.name)) o.visible = false; });
 const pose = q.get('pose') ?? 'idle';

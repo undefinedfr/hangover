@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { itemGeometry } from '../items/models';
-import { vertexColorMaterial } from '../world/materials';
+import { buildBrokenGlasses } from '../items/glasses';
 import { createHero, REST_POSE, type Hero, type HeroPose } from './HeroModel';
 import { Physics, RAPIER, GROUP_PLAYER, GROUP_WORLD, GROUP_VEHICLE, groups } from '../core/Physics';
 
@@ -24,7 +23,7 @@ export class Player {
 
   private readonly hero: Hero;
   private readonly pose3: HeroPose = { ...REST_POSE };
-  private readonly glasses: THREE.Mesh;
+  private readonly glasses: THREE.Object3D;
 
   readonly position = new THREE.Vector3();
   facing = 0;
@@ -47,9 +46,9 @@ export class Player {
     this.hero = createHero();
     this.object.add(this.hero.root);
 
-    // Lunettes posées sur le nez (écart des yeux ≈ 6,4 cm)
-    this.glasses = new THREE.Mesh(itemGeometry('lunettes'), vertexColorMaterial({ flat: false }));
-    this.glasses.scale.setScalar(0.28);
+    // Lunettes (taille réelle) posées sur le nez
+    this.glasses = buildBrokenGlasses();
+    this.glasses.scale.setScalar(0.93);
     this.glasses.visible = false;
     this.hero.glassesAnchor.add(this.glasses);
 

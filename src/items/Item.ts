@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { float, uniform, uv, smoothstep, vec3, sin, time, color } from 'three/tsl';
 import type { ItemId } from '../core/GameState';
 import { itemGeometry } from './models';
+import { buildBrokenGlasses } from './glasses';
 import { vertexColorMaterial } from '../world/materials';
 
 const itemMat = vertexColorMaterial({ roughness: 0.5, flat: false });
@@ -9,7 +10,9 @@ const itemMat = vertexColorMaterial({ roughness: 0.5, flat: false });
 /** Objet ramassable : modèle procédural qui flotte et tourne, avec halo optionnel. */
 export class Item {
   readonly object = new THREE.Group();
-  private readonly model: THREE.Mesh;
+  private readonly model: THREE.Object3D;
+  /** Échelle d'affichage au sol (les lunettes sont modélisées à taille réelle). */
+  private readonly baseScale: number;
   private readonly halo: THREE.Mesh;
   private readonly beam: THREE.Mesh;
   private readonly haloOpacity = uniform(1);
@@ -24,9 +27,16 @@ export class Item {
     private readonly haloDistance: number,
   ) {
     this.phase = position.x * 0.37 + position.z * 0.11;
-    this.model = new THREE.Mesh(itemGeometry(id), itemMat);
-    this.model.scale.setScalar(1.8);
-    this.model.castShadow = true;
+    if (id === 'lunettes') {
+      this.model = buildBrokenGlasses();
+      this.baseScale = 5.5;
+    } else {
+      const m = new THREE.Mesh(itemGeometry(id), itemMat);
+      m.castShadow = true;
+      this.model = m;
+      this.baseScale = 1.8;
+    }
+    this.model.scale.setScalar(this.baseScale);
     this.object.add(this.model);
 
     // Halo : disque lumineux additif face caméra + colonne de lumière
@@ -68,7 +78,7 @@ export class Item {
       if (this.vanish > 0) {
         this.vanish = Math.max(0, this.vanish - dt);
         const k = 1 - this.vanish / 0.35;
-        this.model.scale.setScalar(1.8 * (1 + k * 0.8) * (1 - k * k));
+        this.model.scale.setScalar(this.baseScale * (1 + k * 0.8) * (1 - k * k));
         this.model.position.y += dt * 3;
         this.model.rotation.y += dt * 12;
         if (this.vanish === 0) this.object.visible = false;
