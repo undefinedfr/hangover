@@ -418,6 +418,22 @@ kbd {
   padding: 14px 56px;
 }
 
+/* Ville du niveau choisi en préparation derrière le menu */
+.play.is-busy {
+  font-size: 18px;
+  padding: 16px 32px;
+  opacity: 0.8;
+  animation: busy 1.1s ease-in-out infinite;
+}
+
+@keyframes busy {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .play.is-busy { animation: none; }
+}
+
 .controls {
   margin-top: 18px;
   text-align: left;

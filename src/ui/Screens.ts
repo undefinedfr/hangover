@@ -42,8 +42,10 @@ function el<T extends HTMLElement>(html: string): T {
 /** Menu d'accueil. */
 export class Menu {
   readonly root: HTMLDivElement;
-  private selected: Mode = 'facile';
+  private selected: Mode = 'normal';
   onPlay: ((mode: Mode) => void) | null = null;
+  /** Choix d'un autre niveau par le joueur (pas lors d'un select() programmatique). */
+  onSelect: ((mode: Mode) => void) | null = null;
 
   constructor(parent: HTMLElement) {
     this.root = el<HTMLDivElement>(`
@@ -97,11 +99,25 @@ export class Menu {
           <span class="best">${b !== undefined ? `Record : ${formatTime(b)}` : 'Pas encore de record'}</span>
         </button>`);
       card.addEventListener('click', () => {
+        if (m === this.selected) return;
         this.selected = m;
         this.render();
+        this.onSelect?.(m);
       });
       wrap.appendChild(card);
     });
+  }
+
+  get mode(): Mode {
+    return this.selected;
+  }
+
+  /** Ville du niveau choisi en cours de préparation derrière le menu. */
+  setPreparing(v: boolean): void {
+    const b = this.root.querySelector<HTMLButtonElement>('.play')!;
+    b.textContent = v ? 'Préparation de la ville…' : 'Jouer';
+    b.classList.toggle('is-busy', v);
+    b.setAttribute('aria-busy', String(v));
   }
 
   select(mode: Mode): void {

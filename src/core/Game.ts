@@ -124,10 +124,15 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
   }
 
-  startGame(mode: Mode, seed: number, opts: { showcase?: boolean } = {}): void {
+  /**
+   * Construit une partie. `showcase` : la partie est prête mais attend derrière le menu (voir play()).
+   * `quiet` : pas d'écran de chargement plein écran (reconstruction discrète derrière le menu).
+   */
+  startGame(mode: Mode, seed: number, opts: { showcase?: boolean; quiet?: boolean } = {}): void {
+    const loader = opts.quiet ? null : boot;
     // Écran de chargement (déjà visible au premier lancement : il continue simplement)
-    boot.show('Réveil en cours…');
-    boot.set(0.15, 'Construction de la ville…');
+    loader?.show('Réveil en cours…');
+    loader?.set(0.15, 'Construction de la ville…');
     this.teardown();
     this.mode = mode;
     this.seed = seed;
@@ -194,6 +199,8 @@ export class Game {
     });
 
     this.accumulator = 0;
+    this.startYaw = st.rotY;
+    this.camPlay = { distance: this.cam.distance, pitch: this.cam.pitch };
     if (opts.showcase) {
       this.cam.distance = 16;
       this.cam.pitch = 0.42;
@@ -203,9 +210,9 @@ export class Game {
     // Pré-compilation de tous les shaders avant d'afficher : pas d'à-coups au premier regard
     const token = ++this.loadToken;
     this.state = 'loading';
-    this.setLoading(true);
+    if (loader) this.setLoading(true);
     // La compilation ne donne pas de progression : la barre avance doucement jusqu'à la fin
-    boot.creep(0.97, 'Préparation des shaders (quelques secondes)…', 6);
+    loader?.creep(0.97, 'Préparation des shaders (quelques secondes)…', 6);
     this.cam.update(1, this.player.position);
     this.camera.updateMatrixWorld();
     const finish = () => {
@@ -213,7 +220,8 @@ export class Game {
       this.state = opts.showcase ? 'menu' : 'playing';
       this.last = performance.now();
       this.accumulator = 0;
-      this.setLoading(false);
+      if (loader) this.setLoading(false);
+      this.onReady?.();
     };
     // Puis un premier rendu hors écran de chargement : envoi des géométries au GPU
     const warm = () => {
@@ -230,6 +238,29 @@ export class Game {
   }
 
   private loadToken = 0;
+  private startYaw = 0;
+  private camPlay = { distance: 3.9, pitch: 0.14 };
+  /** Appelé quand une partie construite par startGame() est prête (shaders compilés). */
+  onReady: (() => void) | null = null;
+
+  /**
+   * Lance la partie préparée derrière le menu (startGame avec `showcase`), sans nouveau chargement.
+   * Renvoie false si aucune partie n'est prête.
+   */
+  play(): boolean {
+    if (this.state !== 'menu' || !this.player || !this.cam) return false;
+    this.cam.distance = this.camPlay.distance;
+    this.cam.pitch = this.camPlay.pitch;
+    this.cam.yaw = this.startYaw;
+    this.hud.show(true);
+    this.elapsed = 0;
+    this.accumulator = 0;
+    this.last = performance.now();
+    this.input.clearPressed();
+    this.state = 'playing';
+    this.message('Tu te réveilles sur un banc. Aïe. Où sont passées tes affaires ?', 6);
+    return true;
+  }
 
   private setLoading(v: boolean): void {
     if (v) boot.show();

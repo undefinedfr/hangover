@@ -78,18 +78,49 @@ async function boot(): Promise<void> {
     game.startGame(mode, seed);
   };
 
+  // La vraie partie du niveau choisi se prépare derrière le menu : « Jouer » la lance sans
+  // nouveau chargement. Changer de niveau la reconstruit discrètement (bouton « Préparation… »).
+  let menuSeed = 0;
+  let prepId = 0;
+  let playWhenReady = false;
+  const prepare = async (mode: Mode, quiet: boolean) => {
+    const id = ++prepId;
+    menu.setPreparing(true);
+    if (quiet) await nextPaint(); // affiche « Préparation… » avant le calcul synchrone
+    if (id !== prepId) return;
+    game.startGame(mode, menuSeed, { showcase: true, quiet });
+  };
+  const launch = () => {
+    playWhenReady = false;
+    pendingSeed = null;
+    menu.show(false);
+    setUrl(game.mode, game.seed);
+    game.play();
+  };
+  game.onReady = () => {
+    if (game.state !== 'menu') return;
+    menu.setPreparing(false);
+    if (playWhenReady && game.mode === menu.mode) launch();
+  };
+
   const showMenu = () => {
     end.show(null);
     pause.show(false);
-    game.startGame('facile', pendingSeed ?? 20240, { showcase: true });
+    menuSeed = pendingSeed ?? randomSeed();
+    playWhenReady = false;
     menu.show(true);
+    void prepare(menu.mode, false);
   };
 
+  menu.onSelect = (mode) => void prepare(mode, true);
   menu.onPlay = (mode) => {
-    const seed = pendingSeed ?? randomSeed();
-    pendingSeed = null;
-    start(mode, seed);
-    game.input.requestPointerLock();
+    if (game.state === 'menu' && game.mode === mode) {
+      launch();
+      game.input.requestPointerLock();
+    } else {
+      // Ville encore en préparation : la partie démarre dès qu'elle est prête
+      playWhenReady = true;
+    }
   };
   end.onReplay = () => {
     start(game.mode, randomSeed());
@@ -125,8 +156,8 @@ async function boot(): Promise<void> {
   });
 
   installHook(game, start);
-  showMenu();
   if (isMode(urlMode)) menu.select(urlMode);
+  showMenu();
 }
 
 void boot();
