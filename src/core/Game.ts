@@ -6,6 +6,7 @@ import { MODES, type Mode, type State } from './GameState';
 import { Environment } from '../world/Environment';
 import { Player, PLAYER_CENTER } from '../player/Player';
 import { preloadHero } from '../player/HeroModel';
+import { boot } from '../ui/boot';
 import { ThirdPersonCamera } from '../player/ThirdPersonCamera';
 import { generateCity, type City } from '../world/CityGenerator';
 import { Item } from '../items/Item';
@@ -124,6 +125,9 @@ export class Game {
   }
 
   startGame(mode: Mode, seed: number, opts: { showcase?: boolean } = {}): void {
+    // Écran de chargement (déjà visible au premier lancement : il continue simplement)
+    boot.show('Réveil en cours…');
+    boot.set(0.15, 'Construction de la ville…');
     this.teardown();
     this.mode = mode;
     this.seed = seed;
@@ -200,6 +204,8 @@ export class Game {
     const token = ++this.loadToken;
     this.state = 'loading';
     this.setLoading(true);
+    // La compilation ne donne pas de progression : la barre avance doucement jusqu'à la fin
+    boot.creep(0.97, 'Préparation des shaders (quelques secondes)…', 6);
     this.cam.update(1, this.player.position);
     this.camera.updateMatrixWorld();
     const finish = () => {
@@ -226,8 +232,8 @@ export class Game {
   private loadToken = 0;
 
   private setLoading(v: boolean): void {
-    const el = document.getElementById('loading');
-    if (el) el.hidden = !v;
+    if (v) boot.show();
+    else boot.done();
   }
 
   pause(): void {

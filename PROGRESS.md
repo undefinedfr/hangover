@@ -89,3 +89,9 @@ Limites connues (mises à jour) :
 ## Itération 5 — Lunettes abîmées
 - ✅ Nouvelles lunettes réalistes et cassées : verre fêlé, scotch sur le pont, branche tordue, monture de travers ; même modèle au sol et sur le nez.
 - ✅ Correctif : au démarrage d'une partie, le pas de temps pouvait devenir négatif (horodatage de `requestAnimationFrame` en retard sur `performance.now()`), ce qui gelait la simulation plusieurs secondes sur machine chargée. Le pas est désormais borné à [0 ; 0,1 s].
+
+## Itération 6 — Écran de chargement avec progression
+- ✅ Écran « Gueule de bois » affiché dès l'ouverture de la page (HTML/CSS en ligne, avant même le téléchargement du code), avec barre, pourcentage, étape en cours et temps restant estimé.
+- ✅ Téléchargement mesuré pour de vrai : un plugin Vite (`vite.config.ts`) remplace la balise du module par la liste des fichiers lourds (code ~5,5 Mo, héros ~3,5 Mo) ; le script en ligne les télécharge en comptant les octets, puis injecte le module, servi depuis le cache HTTP.
+- ✅ Étapes suivantes signalées par le jeu (`src/ui/boot.ts`) : carte graphique, construction du quartier, préparation des shaders (progression lente et continue, reflet animé sur le compositeur pour ne jamais paraître figé). Le même écran sert au lancement de chaque partie.
+- Mesuré à 10 Mb/s : téléchargement en ~5 s avec compteur en Mo ; la suite dépend surtout du GPU (compilation des shaders).

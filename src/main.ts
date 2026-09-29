@@ -4,6 +4,7 @@ import { installHook } from './debug/hook';
 import { isMode, type Mode } from './core/GameState';
 import { randomSeed } from './core/rng';
 import { Menu, EndScreen, PauseScreen, saveBest, loadBest } from './ui/Screens';
+import { boot as bootScreen, nextPaint } from './ui/boot';
 
 function hasWebGL2(): boolean {
   try {
@@ -15,6 +16,7 @@ function hasWebGL2(): boolean {
 }
 
 function hideLoading(): void {
+  bootScreen.hide();
   document.getElementById('loading')?.setAttribute('hidden', '');
 }
 
@@ -36,9 +38,12 @@ async function boot(): Promise<void> {
     return;
   }
 
+  bootScreen.creep(0.74, 'Réveil de la carte graphique…', 3);
   const game = new Game(canvas);
   try {
     await game.init();
+    bootScreen.set(0.75, 'Construction du quartier…');
+    await nextPaint();
   } catch (err) {
     console.warn(err);
     showFatal(

@@ -17,11 +17,83 @@
     <meta name="twitter:title" content="Gueule de bois" />
     <meta name="twitter:description" content="Retrouve tes lunettes, tes clés et ta voiture, puis rentre chez toi. Jeu 3D low poly dans le navigateur." />
     <meta name="twitter:image" content="./og-image.png" />
+    <style>
+      /* Écran de chargement : styles en ligne pour s'afficher avant le téléchargement du jeu */
+      .loading {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background: linear-gradient(#7fb2e6, #ffc49a);
+        font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+        color: #2d2640;
+        transition: opacity 0.35s ease;
+      }
+      .loading[hidden] { display: none; }
+      .loading.is-leaving { opacity: 0; pointer-events: none; }
+      .boot-card {
+        width: min(420px, 100%);
+        padding: 24px 24px 20px;
+        border-radius: 22px;
+        background: #fff7ee;
+        box-shadow: 0 10px 30px rgba(45, 38, 64, 0.25);
+        text-align: center;
+      }
+      .boot-title { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+      .boot-tag { margin: 4px 0 18px; font-size: 14px; color: #8c84a3; }
+      .boot-bar {
+        position: relative;
+        height: 16px;
+        border-radius: 99px;
+        background: #eadfd3;
+        overflow: hidden;
+      }
+      .boot-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0;
+        border-radius: 99px;
+        background: #ff6f59;
+        overflow: hidden;
+      }
+      /* Reflet animé sur le compositeur : la barre reste vivante même si le processeur est occupé */
+      .boot-fill::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        width: 60px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+        animation: boot-shine 1.3s linear infinite;
+      }
+      @keyframes boot-shine { from { transform: translateX(-60px); } to { transform: translateX(420px); } }
+      .boot-step { margin-top: 12px; min-height: 20px; font-size: 15px; font-weight: 700; }
+      .boot-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 4px;
+        font-size: 13px;
+        color: #8c84a3;
+        font-variant-numeric: tabular-nums;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-fill::after { animation: none; }
+      }
+    </style>
   </head>
   <body>
     <canvas id="game" tabindex="0" aria-label="Jeu Gueule de bois"></canvas>
     <div id="ui"></div>
-    <div id="loading" class="loading">Réveil en cours…</div>
+    <div id="loading" class="loading">
+      <div class="boot-card" role="progressbar" aria-label="Chargement du jeu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="boot-title">Gueule de bois</div>
+        <div class="boot-tag">Réveil difficile en cours…</div>
+        <div class="boot-bar"><div class="boot-fill"></div></div>
+        <div class="boot-step">Chargement…</div>
+        <div class="boot-meta"><span class="boot-pct">0 %</span><span class="boot-eta"></span></div>
+      </div>
+    </div>
     <div id="fatal" class="fatal" hidden>
       <div class="card">
         <h2></h2>
@@ -31,6 +103,129 @@
     <noscript>
       <div class="fatal"><div class="card"><h2>JavaScript est désactivé</h2><p>Ce jeu a besoin de JavaScript pour fonctionner.</p></div></div>
     </noscript>
+    <script>
+      // Barre de progression du chargement. Téléchargement réel (octets reçus) quand la liste des
+      // fichiers est connue (build), puis étapes signalées par le jeu via window.__boot.
+      (function () {
+        var el = document.getElementById('loading');
+        var card = el.querySelector('.boot-card');
+        var fill = el.querySelector('.boot-fill');
+        var stepEl = el.querySelector('.boot-step');
+        var pctEl = el.querySelector('.boot-pct');
+        var etaEl = el.querySelector('.boot-eta');
+        var target = 0, shown = 0, creepTo = 0, creepTau = 0, t0 = performance.now(), last = t0, eta = -1, etaAt = 0;
+        var visible = true, timer = 0;
+
+        function render(now) {
+          var dt = Math.min(0.25, (now - last) / 1000);
+          last = now;
+          // Rampe lente vers le prochain jalon quand une étape ne donne pas de progression mesurable
+          if (creepTau > 0 && target < creepTo) target += (creepTo - target) * (1 - Math.exp(-dt / creepTau));
+          shown += (target - shown) * Math.min(1, dt * 8);
+          var p = Math.max(0, Math.min(1, shown));
+          fill.style.width = (p * 100).toFixed(1) + '%';
+          var pct = Math.floor(p * 100);
+          pctEl.textContent = pct + ' %';
+          card.setAttribute('aria-valuenow', String(pct));
+          // Temps restant : extrapolation du rythme observé, lissée et rafraîchie deux fois par seconde
+          var elapsed = (now - t0) / 1000;
+          if (now - etaAt > 500) {
+            etaAt = now;
+            if (p > 0.04 && p < 0.995 && elapsed > 0.8) {
+              var guess = (elapsed * (1 - p)) / p;
+              eta = eta < 0 ? guess : eta * 0.7 + guess * 0.3;
+              etaEl.textContent = eta < 1.5 ? 'presque fini' : 'encore ~' + Math.ceil(eta) + ' s';
+            } else if (p <= 0.04) {
+              etaEl.textContent = 'estimation…';
+            }
+          }
+          if (visible) timer = requestAnimationFrame(render);
+        }
+
+        var api = {
+          /** Affiche l'écran (repart de zéro s'il était caché). */
+          show: function (label) {
+            if (!visible || el.hidden) {
+              target = shown = creepTo = creepTau = 0;
+              t0 = last = performance.now();
+              eta = -1;
+              etaEl.textContent = '';
+              el.hidden = false;
+              el.classList.remove('is-leaving');
+              visible = true;
+              timer = requestAnimationFrame(render);
+            }
+            if (label) stepEl.textContent = label;
+          },
+          /** Progression mesurée (0..1, jamais en arrière). */
+          set: function (p, label) {
+            target = Math.max(target, p);
+            creepTau = 0;
+            if (label) stepEl.textContent = label;
+          },
+          /** Étape sans mesure : avance doucement vers `to` (constante de temps `tau` en s). */
+          creep: function (to, label, tau) {
+            creepTo = Math.max(target, to);
+            creepTau = tau || 4;
+            if (label) stepEl.textContent = label;
+          },
+          done: function () {
+            target = 1;
+            creepTau = 0;
+            stepEl.textContent = 'Prêt !';
+            etaEl.textContent = '';
+            setTimeout(function () {
+              el.classList.add('is-leaving');
+              setTimeout(api.hide, 350);
+            }, 200);
+          },
+          hide: function () {
+            visible = false;
+            cancelAnimationFrame(timer);
+            el.hidden = true;
+            el.classList.remove('is-leaving');
+          },
+        };
+        window.__boot = api;
+        timer = requestAnimationFrame(render);
+
+        var F = window.__BOOT_FILES;
+        if (!F) return; // développement : le module est chargé directement
+        var total = 0, loaded = 0;
+        F.files.forEach(function (f) { total += f.s; });
+        var mb = function (b) { return (b / 1048576).toFixed(1).replace('.', ','); };
+        var DL = 0.6; // part de la barre réservée au téléchargement
+        api.set(0, 'Téléchargement du jeu… 0 / ' + mb(total) + ' Mo');
+        function grab(f) {
+          return fetch(f.u)
+            .then(function (r) {
+              if (!r.ok || !r.body) { loaded += f.s; return; }
+              var reader = r.body.getReader(), got = 0;
+              function pump() {
+                return reader.read().then(function (x) {
+                  if (x.done) { loaded += Math.max(0, f.s - got); return; }
+                  var n = Math.min(x.value.length, Math.max(0, f.s - got));
+                  got += x.value.length;
+                  loaded += n;
+                  api.set((DL * loaded) / total, 'Téléchargement du jeu… ' + mb(loaded) + ' / ' + mb(total) + ' Mo');
+                  return pump();
+                });
+              }
+              return pump();
+            })
+            .catch(function () { loaded += f.s; });
+        }
+        Promise.all(F.files.map(grab)).then(function () {
+          api.set(DL, 'Démarrage…');
+          // Les fichiers sont maintenant dans le cache HTTP : le module se charge sans nouveau téléchargement
+          var s = document.createElement('script');
+          s.type = 'module';
+          s.crossOrigin = '';
+          s.src = F.entry;
+          document.body.appendChild(s);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

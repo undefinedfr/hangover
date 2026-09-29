@@ -86,3 +86,8 @@
 - Modèle dédié (`src/items/glasses.ts`) à l'échelle réelle, partagé entre l'objet au sol (agrandi ×5,5 pour rester lisible) et les lunettes portées (ancre `anchor_glasses` du héros).
 - Monture pantos en acétate écaille (bruit TSL), charnières métalliques, verre gauche intact et transparent, verre droit fêlé en étoile (rayons irréguliers + arcs concentriques calculés en TSL, plus opaques et rugueux sur les fissures).
 - Traces de la soirée : pont réparé au ruban adhésif, branche gauche tordue vers le bas et l'extérieur, face avant vrillée et monture de travers.
+
+## Écran de chargement
+- Affiché avant tout téléchargement (styles et script en ligne dans `index.html`) pour qu'on voie tout de suite que le jeu charge.
+- Progression réelle pendant le téléchargement : au build, un plugin Vite injecte `window.__BOOT_FILES` (url + taille décompressée de chaque fichier) à la place de la balise du module ; le script en ligne télécharge ces fichiers en flux (octets comptés), puis ajoute le module, relu depuis le cache HTTP. En développement, le module se charge normalement.
+- 60 % de la barre pour le téléchargement, puis des jalons posés par le jeu (`window.__boot` : `set`, `creep`, `done`). Les étapes sans mesure (compilation des shaders) avancent de façon asymptotique vers le jalon suivant ; le temps restant est extrapolé du rythme observé.

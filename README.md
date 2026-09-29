@@ -63,6 +63,7 @@ Chaque partie a une **seed** (`?seed=1234&mode=normal` dans l'URL) pour rejouer 
 - [three.js](https://threejs.org) `WebGPURenderer` (repli automatique sur WebGL2) et **TSL** : fenêtres procédurales des immeubles, halos, flou « gueule de bois » en post-process (flou gaussien mélangé selon la distance au joueur, reconstruite depuis la profondeur).
 - [Rapier](https://rapier.rs) : collisions, `KinematicCharacterController` pour le personnage et les véhicules.
 - TypeScript strict + Vite. HUD et menus en HTML/CSS. Sons synthétisés en WebAudio.
+- Écran de chargement avec vraie barre de progression (octets téléchargés, puis étapes du démarrage) et temps restant estimé.
 - Ville, objets et véhicules générés procéduralement (RNG mulberry32 seedé), mobilier en `InstancedMesh`.
 - Héros : modèle MakeHuman (CC0) avec squelette, vêtements générés par script, animation procédurale des os (voir [DECISIONS.md](DECISIONS.md)).
 
